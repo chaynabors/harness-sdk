@@ -108,9 +108,8 @@ def test_update_config_proxy_prefix(client_args, initial_model_id, new_model_id,
                 },
             },
             {
-                "signature": "reasoning_signature",
-                "thinking": "reasoning_text",
-                "type": "thinking",
+                "type": "text",
+                "text": "reasoning_text",
             },
         ),
         # Case 2: Video
@@ -593,7 +592,7 @@ def test_format_request_message_content_reasoning():
     content = {"reasoningContent": {"reasoningText": {"signature": "test_sig", "text": "test_thinking"}}}
 
     result = LiteLLMModel.format_request_message_content(content)
-    expected = {"signature": "test_sig", "thinking": "test_thinking", "type": "thinking"}
+    expected = {"type": "text", "text": "test_thinking"}
 
     assert result == expected
 

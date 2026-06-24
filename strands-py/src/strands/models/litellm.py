@@ -105,9 +105,8 @@ class LiteLLMModel(OpenAIModel):
         """
         if "reasoningContent" in content:
             return {
-                "signature": content["reasoningContent"]["reasoningText"]["signature"],
-                "thinking": content["reasoningContent"]["reasoningText"]["text"],
-                "type": "thinking",
+                "type": "text",
+                "text": content["reasoningContent"]["reasoningText"]["text"],
             }
 
         if "video" in content:
