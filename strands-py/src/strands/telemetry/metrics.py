@@ -110,7 +110,7 @@ class ToolMetrics:
     """Metrics for a specific tool's usage.
 
     Attributes:
-        tool: The tool being tracked.
+        tool: The tool being tracked. Reflects the first recorded invocation; per-invocation inputs are not aggregated.
         call_count: Number of times the tool has been called.
         success_count: Number of successful tool calls.
         error_count: Number of failed tool calls.
@@ -140,7 +140,6 @@ class ToolMetrics:
             metrics_client: The metrics client for recording the metrics.
             attributes: attributes of the metrics.
         """
-        self.tool = tool  # Update with latest tool state
         self.call_count += 1
         self.total_time += duration
         metrics_client.tool_call_count.add(1, attributes=attributes)

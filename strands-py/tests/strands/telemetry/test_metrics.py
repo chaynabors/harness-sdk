@@ -211,6 +211,7 @@ def test_trace_to_dict(trace):
 
 @pytest.mark.parametrize("success", [True, False])
 def test_tool_metrics_add_call(success, tool, tool_metrics, mock_get_meter_provider):
+    initial_tool = dict(tool)
     tool = dict(tool, **{"name": "updated"})
     duration = 1
     metrics_client = MetricsClient()
@@ -221,7 +222,7 @@ def test_tool_metrics_add_call(success, tool, tool_metrics, mock_get_meter_provi
 
     tru_attrs = dataclasses.asdict(tool_metrics)
     exp_attrs = {
-        "tool": tool,
+        "tool": initial_tool,
         "call_count": 1,
         "success_count": success,
         "error_count": not success,
