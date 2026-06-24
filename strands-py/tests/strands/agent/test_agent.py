@@ -1627,6 +1627,34 @@ def test_agent_redacts_input_on_triggered_guardrail():
     assert agent.messages[0]["content"][0]["text"] == "BLOCKED!"
 
 
+def test_guardrail_redact_targets_last_user_message_not_last_message():
+    mocked_model = MockedModelProvider(
+        [{"redactedUserContent": "BLOCKED!", "redactedAssistantContent": "INPUT BLOCKED!"}]
+    )
+
+    agent = Agent(
+        model=mocked_model,
+        system_prompt="You are a helpful assistant.",
+        callback_handler=None,
+    )
+
+    ltm_content = "Long-term memory context that must not be redacted."
+
+    def inject_ltm_after_user_input(event: BeforeInvocationEvent) -> None:
+        if event.messages is not None:
+            event.messages = [*event.messages, {"role": "assistant", "content": [{"text": ltm_content}]}]
+
+    agent.hooks.add_callback(BeforeInvocationEvent, inject_ltm_after_user_input)
+
+    response = agent("CACTUS")
+
+    assert response.stop_reason == "guardrail_intervened"
+    assert agent.messages[0]["role"] == "user"
+    assert agent.messages[0]["content"][0]["text"] == "BLOCKED!"
+    assert agent.messages[1]["role"] == "assistant"
+    assert agent.messages[1]["content"][0]["text"] == ltm_content
+
+
 def test_agent_restored_from_session_management_with_redacted_input():
     mocked_model = MockedModelProvider(
         [{"redactedUserContent": "BLOCKED!", "redactedAssistantContent": "INPUT BLOCKED!"}]
