@@ -1286,12 +1286,17 @@ class Agent(AgentBase):
                         and event.chunk.get("redactContent")
                         and event.chunk["redactContent"].get("redactUserContentMessage")
                     ):
-                        self.messages[-1]["content"] = self._redact_user_content(
-                            self.messages[-1]["content"],
-                            str(event.chunk["redactContent"]["redactUserContentMessage"]),
+                        user_message = next(
+                            (message for message in reversed(self.messages) if message["role"] == "user"),
+                            None,
                         )
-                        if self._session_manager:
-                            self._session_manager.redact_latest_message(self.messages[-1], self)
+                        if user_message is not None:
+                            user_message["content"] = self._redact_user_content(
+                                user_message["content"],
+                                str(event.chunk["redactContent"]["redactUserContentMessage"]),
+                            )
+                            if self._session_manager:
+                                self._session_manager.redact_latest_message(user_message, self)
                     yield event
 
                 # Capture the result from the final event if available
