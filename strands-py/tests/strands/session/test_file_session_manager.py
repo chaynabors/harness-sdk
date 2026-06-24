@@ -150,6 +150,15 @@ def test_create_agent(file_manager, sample_session, sample_agent):
         assert data["state"] == sample_agent.state
 
 
+def test_create_agent_already_exists(file_manager, sample_session, sample_agent):
+    """Test that creating a duplicate agent does not silently overwrite."""
+    file_manager.create_session(sample_session)
+    file_manager.create_agent(sample_session.session_id, sample_agent)
+
+    with pytest.raises(SessionException, match="already exists"):
+        file_manager.create_agent(sample_session.session_id, sample_agent)
+
+
 def test_read_agent(file_manager, sample_session, sample_agent):
     """Test reading an agent from a session."""
     # Create session and agent
