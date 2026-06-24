@@ -201,11 +201,7 @@ async def test_send_all_content_types(mock_genai_client, model):
     # Test text input
     text_input = BidiTextInputEvent(text="Hello", role="user")
     await model.send(text_input)
-    mock_live_session.send_client_content.assert_called_once()
-    call_args = mock_live_session.send_client_content.call_args
-    content = call_args.kwargs.get("turns")
-    assert content.role == "user"
-    assert content.parts[0].text == "Hello"
+    mock_live_session.send_realtime_input.assert_called_once_with(text="Hello")
 
     # Test audio input (base64 encoded)
     audio_b64 = base64.b64encode(b"audio_bytes").decode("utf-8")
@@ -216,7 +212,7 @@ async def test_send_all_content_types(mock_genai_client, model):
         channels=1,
     )
     await model.send(audio_input)
-    mock_live_session.send_realtime_input.assert_called_once()
+    assert mock_live_session.send_realtime_input.call_count == 2
 
     # Test image input (base64 encoded, no encoding parameter)
     image_b64 = base64.b64encode(b"image_bytes").decode("utf-8")
@@ -248,7 +244,7 @@ async def test_send_edge_cases(mock_genai_client, model):
     text_input = BidiTextInputEvent(text="Hello", role="user")
     with pytest.raises(RuntimeError, match=r"call start before sending"):
         await model.send(text_input)
-    mock_live_session.send_client_content.assert_not_called()
+    mock_live_session.send_realtime_input.assert_not_called()
 
     # Test unknown content type
     await model.start()
@@ -549,6 +545,7 @@ def test_config_building(model, system_prompt, tool_spec):
     # Test basic config
     config_basic = model._build_live_config()
     assert isinstance(config_basic, dict)
+    assert "session_resumption" not in config_basic
 
     # Test with system prompt
     config_prompt = model._build_live_config(system_prompt=system_prompt)
@@ -558,6 +555,9 @@ def test_config_building(model, system_prompt, tool_spec):
     config_tools = model._build_live_config(tools=[tool_spec])
     assert "tools" in config_tools
     assert len(config_tools["tools"]) > 0
+
+    config_resume = model._build_live_config(live_session_handle="h1")
+    assert config_resume["session_resumption"] == {"handle": "h1"}
 
 
 def test_tool_formatting(model, tool_spec):
