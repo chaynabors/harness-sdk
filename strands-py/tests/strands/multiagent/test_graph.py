@@ -814,6 +814,35 @@ async def test_node_reset_executor_state():
     assert multi_agent_node.result is None
 
 
+def test_node_reset_executor_state_preserves_nested_graph_state():
+    """Test that reset_executor_state does not overwrite a nested Graph's GraphState."""
+    inner_agent = create_mock_agent("inner_agent", "Inner response")
+    inner_builder = GraphBuilder()
+    inner_builder.add_node(inner_agent, "inner_node")
+    inner_graph = inner_builder.build()
+
+    assert isinstance(inner_graph.state, GraphState)
+    original_state = inner_graph.state
+
+    nested_node = GraphNode("nested_graph_node", inner_graph)
+    nested_node.execution_status = Status.COMPLETED
+    nested_node.result = NodeResult(
+        result="test result",
+        execution_time=100,
+        status=Status.COMPLETED,
+        accumulated_usage={},
+        accumulated_metrics={},
+        execution_count=1,
+    )
+
+    nested_node.reset_executor_state()
+
+    assert isinstance(inner_graph.state, GraphState)
+    assert inner_graph.state is original_state
+    assert nested_node.execution_status == Status.PENDING
+    assert nested_node.result is None
+
+
 def test_graph_dataclasses_and_enums():
     """Test dataclass initialization, properties, and enum behavior."""
     # Test Status enum
