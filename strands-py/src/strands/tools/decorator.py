@@ -163,16 +163,15 @@ class FunctionToolMetadata:
         final_description = description
         if final_description is None:
             final_description = self.param_descriptions.get(param_name) or f"Parameter {param_name}"
-        # Create FieldInfo object from scratch. If the parameter's default is already a
-        # FieldInfo (e.g. Field(default_factory=list)), unwrap it so we don't nest a
-        # non-JSON-serializable FieldInfo inside another Field's default value.
+        # If the parameter's default is already a FieldInfo (e.g. Field(default_factory=list,
+        # ge=0)), use it directly so constraints in its metadata are preserved. Wrapping it
+        # in another Field(default=<FieldInfo>) would nest a non-JSON-serializable default
+        # and trigger PydanticJsonSchemaWarning.
         if isinstance(param_default, FieldInfo):
-            field_kwargs: dict[str, Any] = {"description": param_default.description or final_description}
-            if param_default.default_factory is not None:
-                field_kwargs["default_factory"] = param_default.default_factory
+            if param_default.description is None:
+                final_field = FieldInfo.merge_field_infos(param_default, FieldInfo(description=final_description))
             else:
-                field_kwargs["default"] = param_default.default
-            final_field = Field(**field_kwargs)
+                final_field = param_default
         else:
             final_field = Field(default=param_default, description=final_description)
 
