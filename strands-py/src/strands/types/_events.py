@@ -26,6 +26,18 @@ if TYPE_CHECKING:
     from ..multiagent.base import MultiAgentResult, NodeResult
 
 
+_INTERNAL_INVOCATION_STATE_KEYS = frozenset(
+    {
+        "agent",
+        "event_loop_cycle_id",
+        "event_loop_cycle_span",
+        "event_loop_cycle_trace",
+        "event_loop_parent_cycle_id",
+        "request_state",
+    }
+)
+
+
 class TypedEvent(dict):
     """Base class for all typed events in the agent system."""
 
@@ -140,7 +152,7 @@ class ModelStreamEvent(TypedEvent):
     @override
     def prepare(self, invocation_state: dict) -> None:
         if "delta" in self:
-            self.update(invocation_state)
+            self.update({k: v for k, v in invocation_state.items() if k not in _INTERNAL_INVOCATION_STATE_KEYS})
 
 
 class ToolUseStreamEvent(ModelStreamEvent):
