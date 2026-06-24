@@ -2,6 +2,7 @@
 Tests for the SDK tool watcher module.
 """
 
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -96,3 +97,44 @@ def test_on_modified_error_handling(mock_reload_tool):
 
     # Verify that reload_tool was called
     mock_reload_tool.assert_called_once_with("test_tool")
+
+
+def test_concurrent_start_starts_observer_once():
+    """Concurrent ToolWatcher constructors must start the shared observer exactly once.
+
+    Without serialization, two threads can both see `_observer_started=False` and call
+    `Observer.start()`, which raises `RuntimeError: threads can only be started once`.
+    The mocked `start` blocks briefly so the unlocked race actually interleaves under the GIL.
+    """
+    observer = MagicMock()
+    barrier = threading.Barrier(8)
+    errors: list[BaseException] = []
+
+    def slow_start() -> None:
+        threading.Event().wait(0.05)
+
+    observer.start.side_effect = slow_start
+
+    def construct() -> None:
+        try:
+            barrier.wait()
+            ToolWatcher(ToolRegistry())
+        except BaseException as exc:  # pragma: no cover - only hit if the race regresses
+            errors.append(exc)
+
+    with patch("strands.tools.watcher.Observer", return_value=observer):
+        with patch.multiple(
+            ToolWatcher,
+            _shared_observer=None,
+            _watched_dirs=set(),
+            _observer_started=False,
+            _registry_handlers={},
+        ):
+            threads = [threading.Thread(target=construct) for _ in range(8)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            assert not errors, f"concurrent start raised: {errors}"
+            assert observer.start.call_count == 1
