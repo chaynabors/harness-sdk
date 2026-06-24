@@ -271,6 +271,36 @@ class RepositorySessionManager(SessionManager):
                 )
                 messages.pop(0)
 
+        # Then drop any toolResult blocks that don't pair with a toolUse in the previous assistant message
+        for index, message in enumerate(messages):
+            if index == 0 or message["role"] != "user":
+                continue
+            if not any("toolResult" in content for content in message["content"]):
+                continue
+
+            previous_message = messages[index - 1]
+            valid_tool_use_ids = (
+                {
+                    content["toolUse"]["toolUseId"]
+                    for content in previous_message["content"]
+                    if "toolUse" in content
+                }
+                if previous_message["role"] == "assistant"
+                else set()
+            )
+
+            filtered_content = [
+                content
+                for content in message["content"]
+                if "toolResult" not in content or content["toolResult"]["toolUseId"] in valid_tool_use_ids
+            ]
+            if len(filtered_content) != len(message["content"]):
+                logger.warning(
+                    "Session message history has an orphaned toolResult with no preceding toolUse. "
+                    "Removing orphaned toolResult content blocks to maintain valid conversation structure."
+                )
+                message["content"] = filtered_content
+
         # Then check for orphaned toolUse messages
         for index, message in enumerate(messages):
             # Check all but the latest message in the messages array
