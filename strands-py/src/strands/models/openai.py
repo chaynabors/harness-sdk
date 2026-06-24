@@ -30,6 +30,14 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
+_IMAGE_FORMAT_MIME_TYPES: dict[str, str] = {
+    "png": "image/png",
+    "jpeg": "image/jpeg",
+    "jpg": "image/jpeg",
+    "gif": "image/gif",
+    "webp": "image/webp",
+}
+
 # Alternative context overflow error messages
 # These are commonly returned by OpenAI-compatible endpoints wrapping other providers
 # (e.g., Databricks serving Bedrock models)
@@ -183,7 +191,7 @@ class OpenAIModel(Model):
             }
 
         if "image" in content:
-            mime_type = mimetypes.types_map.get(f".{content['image']['format']}", "application/octet-stream")
+            mime_type = _IMAGE_FORMAT_MIME_TYPES.get(content["image"]["format"], "application/octet-stream")
             image_data = base64.b64encode(content["image"]["source"]["bytes"]).decode("utf-8")
 
             return {

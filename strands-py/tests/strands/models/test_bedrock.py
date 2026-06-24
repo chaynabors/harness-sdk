@@ -2289,6 +2289,28 @@ def test_format_request_video_s3_location(model, model_id):
     assert video_source == {"s3Location": {"uri": "s3://my-bucket/video.mp4"}}
 
 
+@pytest.mark.parametrize(
+    ("input_format", "expected_format"),
+    [
+        ("3gp", "three_gp"),
+        ("three_gp", "three_gp"),
+        ("mp4", "mp4"),
+    ],
+)
+def test_format_request_video_format_normalizes_3gp(model, model_id, input_format, expected_format):
+    """Bedrock expects the three_gp enum; accept the 3gp alias and map it through."""
+    messages = [
+        {
+            "role": "user",
+            "content": [{"video": {"format": input_format, "source": {"bytes": b"video_data"}}}],
+        }
+    ]
+
+    formatted_video = model.format_request(messages)["messages"][0]["content"][0]["video"]
+
+    assert formatted_video["format"] == expected_format
+
+
 def test_format_request_filters_document_content_blocks(model, model_id):
     """Test that format_request filters extra fields from document content blocks."""
     messages = [
@@ -2772,6 +2794,30 @@ async def test_format_request_with_guardrail_latest_message(model):
     # Latest user message image should also be wrapped
     assert "guardContent" in formatted_messages[2]["content"][1]
     assert formatted_messages[2]["content"][1]["guardContent"]["image"]["format"] == "png"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("unsupported_format", ["webp", "gif"])
+async def test_format_request_guardrail_skips_unsupported_image_format(model, unsupported_format):
+    """Bedrock guardContent only supports png and jpeg; other formats pass through unwrapped."""
+    model.update_config(
+        guardrail_id="test-guardrail",
+        guardrail_version="DRAFT",
+        guardrail_latest_message=True,
+    )
+
+    messages = [
+        {
+            "role": "user",
+            "content": [{"image": {"format": unsupported_format, "source": {"bytes": b"fake_image_data"}}}],
+        },
+    ]
+
+    request = model.format_request(messages)
+    formatted_image = request["messages"][0]["content"][0]
+
+    assert "guardContent" not in formatted_image
+    assert formatted_image["image"]["format"] == unsupported_format
 
 
 @pytest.mark.asyncio

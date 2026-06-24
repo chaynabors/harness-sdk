@@ -214,14 +214,24 @@ def test_format_request_with_document(content, formatted_content, model, model_i
     assert tru_request == exp_request
 
 
-def test_format_request_with_image(model, model_id, max_tokens):
+@pytest.mark.parametrize(
+    ("image_format", "expected_media_type"),
+    [
+        ("jpg", "image/jpeg"),
+        ("jpeg", "image/jpeg"),
+        ("png", "image/png"),
+        ("gif", "image/gif"),
+        ("webp", "image/webp"),
+    ],
+)
+def test_format_request_with_image(model, model_id, max_tokens, image_format, expected_media_type):
     messages = [
         {
             "role": "user",
             "content": [
                 {
                     "image": {
-                        "format": "jpg",
+                        "format": image_format,
                         "source": {"bytes": b"base64encodedimage"},
                     },
                 },
@@ -239,7 +249,7 @@ def test_format_request_with_image(model, model_id, max_tokens):
                     {
                         "source": {
                             "data": "YmFzZTY0ZW5jb2RlZGltYWdl",
-                            "media_type": "image/jpeg",
+                            "media_type": expected_media_type,
                             "type": "base64",
                         },
                         "type": "image",

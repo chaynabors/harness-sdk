@@ -75,6 +75,14 @@ _DEFAULT_MIME_TYPE = "application/octet-stream"
 _CONTEXT_WINDOW_OVERFLOW_MSG = "OpenAI Responses API threw context window overflow error"
 _RATE_LIMIT_MSG = "OpenAI Responses API threw rate limit error"
 
+_IMAGE_FORMAT_MIME_TYPES: dict[str, str] = {
+    "png": "image/png",
+    "jpeg": "image/jpeg",
+    "jpg": "image/jpeg",
+    "gif": "image/gif",
+    "webp": "image/webp",
+}
+
 
 def _encode_media_to_data_url(data: bytes, format_ext: str, media_type: str = "image") -> str:
     """Encode media bytes to a base64 data URL with size validation.
@@ -95,7 +103,10 @@ def _encode_media_to_data_url(data: bytes, format_ext: str, media_type: str = "i
             f"{media_type.capitalize()} size {len(data)} bytes exceeds maximum of"
             f" {_MAX_MEDIA_SIZE_BYTES} bytes ({_MAX_MEDIA_SIZE_LABEL})"
         )
-    mime_type = mimetypes.types_map.get(f".{format_ext}", _DEFAULT_MIME_TYPE)
+    if media_type == "image":
+        mime_type = _IMAGE_FORMAT_MIME_TYPES.get(format_ext, _DEFAULT_MIME_TYPE)
+    else:
+        mime_type = mimetypes.types_map.get(f".{format_ext}", _DEFAULT_MIME_TYPE)
     encoded_data = base64.b64encode(data).decode("utf-8")
     return f"data:{mime_type};base64,{encoded_data}"
 

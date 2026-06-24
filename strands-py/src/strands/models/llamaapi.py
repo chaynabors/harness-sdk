@@ -7,7 +7,6 @@
 import base64
 import json
 import logging
-import mimetypes
 from collections.abc import AsyncGenerator
 from typing import Any, TypeVar, cast
 
@@ -26,6 +25,14 @@ from .model import BaseModelConfig, Model
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+_IMAGE_FORMAT_MIME_TYPES: dict[str, str] = {
+    "png": "image/png",
+    "jpeg": "image/jpeg",
+    "jpg": "image/jpeg",
+    "gif": "image/gif",
+    "webp": "image/webp",
+}
 
 
 class LlamaAPIModel(Model):
@@ -105,7 +112,7 @@ class LlamaAPIModel(Model):
             TypeError: If the content block type cannot be converted to a LlamaAPI-compatible format.
         """
         if "image" in content:
-            mime_type = mimetypes.types_map.get(f".{content['image']['format']}", "application/octet-stream")
+            mime_type = _IMAGE_FORMAT_MIME_TYPES.get(content["image"]["format"], "application/octet-stream")
             image_data = base64.b64encode(content["image"]["source"]["bytes"]).decode("utf-8")
 
             return {

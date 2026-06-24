@@ -498,11 +498,12 @@ class BedrockModel(Model):
                 if formatted_content is None:
                     continue
 
-                # Wrap text or image content in guardContent if this is the last user text/image message
-                if idx == last_user_text_idx and ("text" in formatted_content or "image" in formatted_content):
+                # Wrap text or image content in guardContent if this is the last user text/image message.
+                # Bedrock guardContent only supports png and jpeg images; skip wrapping for other formats.
+                if idx == last_user_text_idx:
                     if "text" in formatted_content:
                         formatted_content = {"guardContent": {"text": {"text": formatted_content["text"]}}}
-                    elif "image" in formatted_content:
+                    elif "image" in formatted_content and formatted_content["image"].get("format") in ("png", "jpeg"):
                         formatted_content = {"guardContent": {"image": formatted_content["image"]}}
 
                 cleaned_content.append(formatted_content)
@@ -710,7 +711,8 @@ class BedrockModel(Model):
                     return None
             elif "bytes" in source:
                 formatted_video_source = {"bytes": source["bytes"]}
-            result = {"format": video["format"], "source": formatted_video_source}
+            video_format = "three_gp" if video["format"] == "3gp" else video["format"]
+            result = {"format": video_format, "source": formatted_video_source}
             return {"video": result}
 
         # https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_CitationsContentBlock.html

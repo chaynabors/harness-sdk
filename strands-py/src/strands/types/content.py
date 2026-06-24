@@ -28,14 +28,16 @@ class GuardContentText(TypedDict):
     text: str
 
 
-class GuardContent(TypedDict):
+class GuardContent(TypedDict, total=False):
     """Content block to be evaluated by guardrails.
 
     Attributes:
         text: Text within content block to be evaluated by the guardrail.
+        image: Image within content block to be evaluated by the guardrail.
     """
 
     text: GuardContentText
+    image: ImageContent
 
 
 class ReasoningTextBlock(TypedDict, total=False):
