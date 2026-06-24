@@ -288,9 +288,11 @@ class RepositorySessionManager(SessionManager):
                         if "toolResult" in content
                     ]
 
-                    missing_tool_use_ids = list(set(tool_use_ids) - set(tool_result_ids))
+                    tool_use_id_set = set(tool_use_ids)
+                    missing_tool_use_ids = list(tool_use_id_set - set(tool_result_ids))
+                    orphaned_tool_result_ids = set(tool_result_ids) - tool_use_id_set
                     # If there are missing tool use ids, that means the messages history is broken
-                    if missing_tool_use_ids:
+                    if missing_tool_use_ids or orphaned_tool_result_ids:
                         logger.warning(
                             "Session message history has an orphaned toolUse with no toolResult. "
                             "Adding toolResult content blocks to create valid conversation."
@@ -300,6 +302,13 @@ class RepositorySessionManager(SessionManager):
 
                         if tool_result_ids:
                             # If there were any toolResult ids, that means only some of the content blocks are missing
+                            if orphaned_tool_result_ids:
+                                messages[index + 1]["content"] = [
+                                    content
+                                    for content in messages[index + 1]["content"]
+                                    if "toolResult" not in content
+                                    or content["toolResult"]["toolUseId"] not in orphaned_tool_result_ids
+                                ]
                             messages[index + 1]["content"].extend(missing_content_blocks)
                         else:
                             # The message following the toolUse was not a toolResult, so lets insert it
