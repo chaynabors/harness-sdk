@@ -46,14 +46,18 @@ class ContentBlockDeltaText(TypedDict):
     text: str
 
 
-class ContentBlockDeltaToolUse(TypedDict):
+class ContentBlockDeltaToolUse(TypedDict, total=False):
     """Tool use input delta in a streaming response.
 
     Attributes:
         input: The tool input fragment being streamed.
+        toolUseId: The tool use id, when provided in the delta rather than the start event.
+        name: The tool name, when provided in the delta rather than the start event.
     """
 
     input: str
+    toolUseId: str
+    name: str
 
 
 class CitationSourceContentDelta(TypedDict, total=False):
