@@ -38,13 +38,7 @@ def mock_sleep():
         yield mock
 
 
-any_props = {
-    "agent": ANY,
-    "event_loop_cycle_id": ANY,
-    "event_loop_cycle_span": ANY,
-    "event_loop_cycle_trace": ANY,
-    "request_state": {},
-}
+any_props: dict = {}
 
 
 @pytest.mark.asyncio
@@ -85,33 +79,6 @@ async def test_stream_e2e_success(alist):
     agent = Agent(model=mock_provider, tools=[async_tool, normal_tool, streaming_tool], callback_handler=mock_callback)
 
     stream = agent.stream_async("Do the stuff", invocation_state={"arg1": 1013})
-
-    tool_config = {
-        "toolChoice": {"auto": {}},
-        "tools": [
-            {
-                "toolSpec": {
-                    "description": "async_tool",
-                    "inputSchema": {"json": {"properties": {}, "required": [], "type": "object"}},
-                    "name": "async_tool",
-                }
-            },
-            {
-                "toolSpec": {
-                    "description": "normal_tool",
-                    "inputSchema": {"json": {"properties": {}, "required": [], "type": "object"}},
-                    "name": "normal_tool",
-                }
-            },
-            {
-                "toolSpec": {
-                    "description": "streaming_tool",
-                    "inputSchema": {"json": {"properties": {}, "required": [], "type": "object"}},
-                    "name": "streaming_tool",
-                }
-            },
-        ],
-    }
 
     tru_events = await alist(stream)
     exp_events = [
@@ -176,11 +143,6 @@ async def test_stream_e2e_success(alist):
             "arg1": 1013,
             "data": "Invoking async tool",
             "delta": {"text": "Invoking async tool"},
-            "event_loop_parent_cycle_id": ANY,
-            "messages": ANY,
-            "model": ANY,
-            "system_prompt": None,
-            "tool_config": tool_config,
         },
         {"event": {"contentBlockStop": {}}},
         {"event": {"contentBlockStart": {"start": {"toolUse": {"name": "async_tool", "toolUseId": "1234"}}}}},
@@ -190,11 +152,6 @@ async def test_stream_e2e_success(alist):
             "arg1": 1013,
             "current_tool_use": {"input": {}, "name": "async_tool", "toolUseId": "1234"},
             "delta": {"toolUse": {"input": "{}"}},
-            "event_loop_parent_cycle_id": ANY,
-            "messages": ANY,
-            "model": ANY,
-            "system_prompt": None,
-            "tool_config": tool_config,
             "type": "tool_use_stream",
         },
         {"event": {"contentBlockStop": {}}},
@@ -235,11 +192,6 @@ async def test_stream_e2e_success(alist):
             "arg1": 1013,
             "data": "Invoking streaming tool",
             "delta": {"text": "Invoking streaming tool"},
-            "event_loop_parent_cycle_id": ANY,
-            "messages": ANY,
-            "model": ANY,
-            "system_prompt": None,
-            "tool_config": tool_config,
         },
         {"event": {"contentBlockStop": {}}},
         {"event": {"contentBlockStart": {"start": {"toolUse": {"name": "streaming_tool", "toolUseId": "12345"}}}}},
@@ -249,11 +201,6 @@ async def test_stream_e2e_success(alist):
             "arg1": 1013,
             "current_tool_use": {"input": {}, "name": "streaming_tool", "toolUseId": "12345"},
             "delta": {"toolUse": {"input": "{}"}},
-            "event_loop_parent_cycle_id": ANY,
-            "messages": ANY,
-            "model": ANY,
-            "system_prompt": None,
-            "tool_config": tool_config,
             "type": "tool_use_stream",
         },
         {"event": {"contentBlockStop": {}}},
@@ -302,11 +249,6 @@ async def test_stream_e2e_success(alist):
             "arg1": 1013,
             "data": "I invoked the tools!",
             "delta": {"text": "I invoked the tools!"},
-            "event_loop_parent_cycle_id": ANY,
-            "messages": ANY,
-            "model": ANY,
-            "system_prompt": None,
-            "tool_config": tool_config,
         },
         {"event": {"contentBlockStop": {}}},
         {"event": {"messageStop": {"stopReason": "end_turn"}}},
