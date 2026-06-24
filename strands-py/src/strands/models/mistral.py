@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from typing_extensions import Unpack, override
 
 from ..types.content import ContentBlock, Messages
-from ..types.exceptions import ModelThrottledException
+from ..types.exceptions import ContextWindowOverflowException, ModelThrottledException
 from ..types.streaming import StopReason, StreamEvent
 from ..types.tools import ToolChoice, ToolResult, ToolSpec, ToolUse
 from ._defaults import resolve_config_metadata
@@ -24,6 +24,17 @@ from .model import BaseModelConfig, Model
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+MISTRAL_CONTEXT_WINDOW_OVERFLOW_MESSAGES = [
+    "context length",
+    "context window",
+    "maximum context",
+    "exceeds context",
+    "too long",
+    "too many tokens",
+    "prompt is too long",
+    "input length",
+]
 
 
 class MistralModel(Model):
@@ -422,6 +433,7 @@ class MistralModel(Model):
             Formatted message chunks from the model.
 
         Raises:
+            ContextWindowOverflowException: When the input exceeds the model's context window.
             ModelThrottledException: When the model service is throttling requests.
         """
         warn_on_tool_choice_not_supported(tool_choice)
@@ -501,7 +513,10 @@ class MistralModel(Model):
                                 yield self.format_chunk({"chunk_type": "metadata", "data": chunk.data.usage})
 
         except Exception as e:
-            if "rate" in str(e).lower() or "429" in str(e):
+            error_message = str(e).lower()
+            if any(overflow_message in error_message for overflow_message in MISTRAL_CONTEXT_WINDOW_OVERFLOW_MESSAGES):
+                raise ContextWindowOverflowException(str(e)) from e
+            if "rate" in error_message or "429" in str(e):
                 raise ModelThrottledException(str(e)) from e
             raise
 

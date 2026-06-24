@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from typing_extensions import Unpack, override
 
 from ..types.content import ContentBlock, Messages
+from ..types.exceptions import ContextWindowOverflowException
 from ..types.streaming import StopReason, StreamEvent
 from ..types.tools import ToolChoice, ToolSpec
 from ._validation import _has_location_source, validate_config_keys, warn_on_tool_choice_not_supported
@@ -22,6 +23,16 @@ from .model import BaseModelConfig, Model
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+OLLAMA_CONTEXT_WINDOW_OVERFLOW_MESSAGES = [
+    "input length",
+    "context length",
+    "context window",
+    "maximum context",
+    "exceeds context",
+    "too long",
+    "too many tokens",
+]
 
 
 class OllamaModel(Model):
@@ -310,6 +321,9 @@ class OllamaModel(Model):
 
         Yields:
             Formatted message chunks from the model.
+
+        Raises:
+            ContextWindowOverflowException: If the input exceeds the model's context window.
         """
         warn_on_tool_choice_not_supported(tool_choice)
 
@@ -322,7 +336,14 @@ class OllamaModel(Model):
         event = None
 
         client = ollama.AsyncClient(self.host, **self.client_args)
-        response = await client.chat(**request)
+        try:
+            response = await client.chat(**request)
+        except ollama.ResponseError as error:
+            if any(
+                overflow_message in str(error).lower() for overflow_message in OLLAMA_CONTEXT_WINDOW_OVERFLOW_MESSAGES
+            ):
+                raise ContextWindowOverflowException(str(error)) from error
+            raise
 
         logger.debug("got response from model")
         yield self.format_chunk({"chunk_type": "message_start"})
