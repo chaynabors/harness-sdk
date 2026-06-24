@@ -472,6 +472,10 @@ class AnthropicModel(Model):
                                     "message": {"stop_reason": event.message.stop_reason},
                                 }
                             )
+                        elif event.type == "content_block_stop":
+                            # Build dict directly to avoid Pydantic serialization warnings
+                            # when the content block is a ParsedTextBlock (issue #1865)
+                            yield self.format_chunk({"type": "content_block_stop", "index": event.index})
                         else:
                             yield self.format_chunk(event.model_dump())
 
