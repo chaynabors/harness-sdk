@@ -735,12 +735,15 @@ def test_format_request_tool_choice_auto(model, messages, model_id, tool_spec):
     assert tru_request == exp_request
 
 
-def test_format_request_tool_choice_any(model, messages, model_id, tool_spec):
+def test_format_request_tool_choice_any(bedrock_client, messages, tool_spec):
+    _ = bedrock_client
+    claude_model_id = "us.anthropic.claude-sonnet-4-6"
+    claude_model = BedrockModel(model_id=claude_model_id)
     tool_choice = {"any": {}}
-    tru_request = model.format_request(messages, [tool_spec], tool_choice=tool_choice)
+    tru_request = claude_model.format_request(messages, [tool_spec], tool_choice=tool_choice)
     exp_request = {
         "inferenceConfig": {},
-        "modelId": model_id,
+        "modelId": claude_model_id,
         "messages": messages,
         "system": [],
         "toolConfig": {
@@ -752,12 +755,15 @@ def test_format_request_tool_choice_any(model, messages, model_id, tool_spec):
     assert tru_request == exp_request
 
 
-def test_format_request_tool_choice_tool(model, messages, model_id, tool_spec):
+def test_format_request_tool_choice_tool(bedrock_client, messages, tool_spec):
+    _ = bedrock_client
+    claude_model_id = "us.anthropic.claude-sonnet-4-6"
+    claude_model = BedrockModel(model_id=claude_model_id)
     tool_choice = {"tool": {"name": "test_tool"}}
-    tru_request = model.format_request(messages, [tool_spec], tool_choice=tool_choice)
+    tru_request = claude_model.format_request(messages, [tool_spec], tool_choice=tool_choice)
     exp_request = {
         "inferenceConfig": {},
-        "modelId": model_id,
+        "modelId": claude_model_id,
         "messages": messages,
         "system": [],
         "toolConfig": {
@@ -767,6 +773,27 @@ def test_format_request_tool_choice_tool(model, messages, model_id, tool_spec):
     }
 
     assert tru_request == exp_request
+
+
+@pytest.mark.parametrize(
+    "non_claude_model_id",
+    [
+        "us.meta.llama4-maverick-17b-instruct-v1:0",
+        "us.amazon.nova-pro-v1:0",
+        "cohere.command-r-plus-v1:0",
+    ],
+)
+@pytest.mark.parametrize("forced_choice", [{"any": {}}, {"tool": {"name": "test_tool"}}])
+def test_format_request_tool_choice_falls_back_to_auto_for_non_claude(
+    bedrock_client, messages, tool_spec, non_claude_model_id, forced_choice
+):
+    """Models that reject toolChoice.any/tool should receive toolChoice.auto instead."""
+    _ = bedrock_client
+    non_claude_model = BedrockModel(model_id=non_claude_model_id)
+
+    tru_request = non_claude_model.format_request(messages, [tool_spec], tool_choice=forced_choice)
+
+    assert tru_request["toolConfig"]["toolChoice"] == {"auto": {}}
 
 
 def test_format_request_cache(model, messages, model_id, tool_spec, cache_type):

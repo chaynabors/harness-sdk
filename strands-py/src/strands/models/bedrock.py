@@ -55,6 +55,13 @@ _MODELS_INCLUDE_STATUS = [
     "anthropic.claude",
 ]
 
+# Bedrock model families that accept `toolChoice.any` and `toolChoice.tool` on the Converse API.
+# Other families (Llama, Nova, Titan, Cohere, DeepSeek, etc.) only accept `toolChoice.auto`
+# and reject forcing tool use with a ValidationException.
+_MODELS_SUPPORTING_FORCED_TOOL_CHOICE = [
+    "anthropic.claude",
+]
+
 # Cache of model IDs for which CountTokens API calls should be skipped.
 _SKIP_COUNT_TOKENS_MODELS: set[str] = set()
 
@@ -267,6 +274,8 @@ class BedrockModel(Model):
             if has_tool_content:
                 tool_specs = [noop_tool.tool_spec]
 
+        tool_choice = self._coerce_tool_choice(tool_choice)
+
         # Use system_prompt_content directly (copy for mutability)
         system_blocks: list[SystemContentBlock] = system_prompt_content.copy() if system_prompt_content else []
 
@@ -347,6 +356,38 @@ class BedrockModel(Model):
                 else {}
             ),
         }
+
+    def _coerce_tool_choice(self, tool_choice: ToolChoice | None) -> ToolChoice | None:
+        """Coerce ``toolChoice.any`` / ``toolChoice.tool`` to ``auto`` for models that reject it.
+
+        The Bedrock Converse API only accepts forced tool use (``any``/``tool``) for Anthropic
+        Claude models. Other families (Llama, Nova, Titan, Cohere, DeepSeek, etc.) reject the
+        request with a ValidationException. Structured output forces ``{"any": {}}`` internally,
+        so without this coercion the first attempt against a non-Claude model fails outright.
+
+        Args:
+            tool_choice: The tool choice configuration.
+
+        Returns:
+            The original ``tool_choice`` if the model supports it, ``{"auto": {}}`` if it would
+            be rejected, or ``None`` if no choice was provided.
+        """
+        if tool_choice is None:
+            return None
+
+        if "any" not in tool_choice and "tool" not in tool_choice:
+            return tool_choice
+
+        model_id = self.config.get("model_id", "")
+        if any(family in model_id for family in _MODELS_SUPPORTING_FORCED_TOOL_CHOICE):
+            return tool_choice
+
+        logger.warning(
+            "model_id=<%s>, tool_choice=<%s> | model does not support forced tool choice, falling back to auto",
+            model_id,
+            tool_choice,
+        )
+        return cast(ToolChoice, {"auto": {}})
 
     def _get_additional_request_fields(self, tool_choice: ToolChoice | None) -> dict[str, Any]:
         """Get additional request fields, removing thinking if tool_choice forces tool use.
