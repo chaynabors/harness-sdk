@@ -32,7 +32,12 @@ from ..types.exceptions import (
 from ..types.streaming import CitationsDelta, StreamEvent
 from ..types.tools import ToolChoice, ToolSpec
 from ._defaults import resolve_config_metadata
-from ._strict_schema import ensure_strict_json_schema
+from ._strict_schema import (
+    BEDROCK_STRICT_MAX_OPTIONAL_PARAMS,
+    count_optional_properties,
+    ensure_strict_json_schema,
+    schema_contains_one_of,
+)
 from ._validation import validate_config_keys
 from .model import BaseModelConfig, CacheConfig, CacheToolsConfig, Model
 
@@ -121,6 +126,10 @@ class BedrockModel(Model):
             strict_tools: Flag to enable structured output enforcement on tool definitions.
                 When True, adds strict: true to each tool spec and automatically injects
                 "additionalProperties": false into all object types in tool input schemas.
+                Bedrock strict mode does not support ``oneOf`` schemas and caps the aggregate
+                number of optional parameters across all tools at 24. Tools that violate either
+                constraint are sent without strict mode (with a warning) so the request still
+                succeeds.
                 See https://docs.aws.amazon.com/bedrock/latest/userguide/structured-output.html
             temperature: Controls randomness in generation (higher = more random)
             top_p: Controls diversity via nucleus sampling (alternative to temperature)
@@ -277,6 +286,8 @@ class BedrockModel(Model):
             )
             system_blocks.append({"cachePoint": {"type": cache_prompt}})
 
+        strict_tool_names = self._resolve_strict_tools(tool_specs) if tool_specs else set()
+
         return {
             "modelId": self.config["model_id"],
             "messages": self._format_bedrock_messages(messages),
@@ -293,10 +304,10 @@ class BedrockModel(Model):
                                         "description": tool_spec["description"],
                                         "inputSchema": (
                                             {"json": ensure_strict_json_schema(tool_spec["inputSchema"]["json"])}
-                                            if self.config.get("strict_tools")
+                                            if tool_spec["name"] in strict_tool_names
                                             else tool_spec["inputSchema"]
                                         ),
-                                        **({"strict": True} if self.config.get("strict_tools") else {}),
+                                        **({"strict": True} if tool_spec["name"] in strict_tool_names else {}),
                                     }
                                 }
                                 for tool_spec in tool_specs
@@ -347,6 +358,43 @@ class BedrockModel(Model):
                 else {}
             ),
         }
+
+    def _resolve_strict_tools(self, tool_specs: list[ToolSpec]) -> set[str]:
+        """Determine which tools should have ``strict: true`` applied for this request.
+
+        Bedrock strict mode rejects schemas that use ``oneOf`` and rejects requests whose
+        tool set declares more than ``BEDROCK_STRICT_MAX_OPTIONAL_PARAMS`` aggregate optional
+        parameters. Rather than letting the entire request fail, drop strict mode from any
+        offending tool (or, for the aggregate limit, from every tool) and warn so the caller
+        can see which tools are not running under strict mode.
+        """
+        if not self.config.get("strict_tools"):
+            return set()
+
+        eligible: list[ToolSpec] = []
+        for tool_spec in tool_specs:
+            schema = tool_spec.get("inputSchema", {}).get("json", {})
+            if schema_contains_one_of(schema):
+                logger.warning(
+                    "tool=<%s> | strict_tools disabled for tool: schema contains unsupported 'oneOf'",
+                    tool_spec["name"],
+                )
+                continue
+            eligible.append(tool_spec)
+
+        total_optional = sum(
+            count_optional_properties(tool_spec.get("inputSchema", {}).get("json", {})) for tool_spec in eligible
+        )
+        if total_optional > BEDROCK_STRICT_MAX_OPTIONAL_PARAMS:
+            logger.warning(
+                "optional_param_count=<%d>, limit=<%d> | strict_tools disabled for all tools: aggregate "
+                "optional parameter limit exceeded",
+                total_optional,
+                BEDROCK_STRICT_MAX_OPTIONAL_PARAMS,
+            )
+            return set()
+
+        return {tool_spec["name"] for tool_spec in eligible}
 
     def _get_additional_request_fields(self, tool_choice: ToolChoice | None) -> dict[str, Any]:
         """Get additional request fields, removing thinking if tool_choice forces tool use.

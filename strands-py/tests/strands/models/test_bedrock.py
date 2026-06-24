@@ -718,6 +718,70 @@ def test_format_request_strict_tools_applies_to_all_tools(bedrock_client, model_
             assert tool["toolSpec"]["inputSchema"]["json"]["additionalProperties"] is False
 
 
+def test_format_request_strict_tools_skips_one_of_tool(bedrock_client, model_id, messages, caplog):
+    tool_specs = [
+        {
+            "name": "plain_tool",
+            "description": "Plain",
+            "inputSchema": {"json": {"type": "object", "properties": {"x": {"type": "string"}}}},
+        },
+        {
+            "name": "one_of_tool",
+            "description": "Has oneOf",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "value": {
+                            "oneOf": [
+                                {"type": "object", "properties": {"a": {"type": "string"}}},
+                                {"type": "object", "properties": {"b": {"type": "integer"}}},
+                            ]
+                        }
+                    },
+                }
+            },
+        },
+    ]
+    model = BedrockModel(model_id=model_id, strict_tools=True)
+    with caplog.at_level("WARNING"):
+        request = model.format_request(messages, tool_specs=tool_specs)
+
+    tools_by_name = {
+        tool["toolSpec"]["name"]: tool["toolSpec"] for tool in request["toolConfig"]["tools"] if "toolSpec" in tool
+    }
+    assert tools_by_name["plain_tool"]["strict"] is True
+    assert "strict" not in tools_by_name["one_of_tool"]
+    assert tools_by_name["one_of_tool"]["inputSchema"] == tool_specs[1]["inputSchema"]
+    assert "one_of_tool" in caplog.text
+
+
+def test_format_request_strict_tools_disables_when_aggregate_optional_exceeds_limit(
+    bedrock_client, model_id, messages, caplog
+):
+    tool_specs = [
+        {
+            "name": f"tool_{idx}",
+            "description": "Tool",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {f"opt_{idx}_{i}": {"type": "string"} for i in range(5)},
+                }
+            },
+        }
+        for idx in range(6)
+    ]
+    model = BedrockModel(model_id=model_id, strict_tools=True)
+    with caplog.at_level("WARNING"):
+        request = model.format_request(messages, tool_specs=tool_specs)
+
+    for tool in request["toolConfig"]["tools"]:
+        if "toolSpec" in tool:
+            assert "strict" not in tool["toolSpec"]
+    assert "aggregate optional parameter limit" in caplog.text
+
+
 def test_format_request_tool_choice_auto(model, messages, model_id, tool_spec):
     tool_choice = {"auto": {}}
     tru_request = model.format_request(messages, [tool_spec], tool_choice=tool_choice)

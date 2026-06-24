@@ -14,6 +14,53 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+# Bedrock strict mode caps the aggregate number of optional parameters across all tools.
+# See https://docs.aws.amazon.com/bedrock/latest/userguide/structured-output.html
+BEDROCK_STRICT_MAX_OPTIONAL_PARAMS = 24
+
+
+def schema_contains_one_of(schema: Any) -> bool:
+    """Return True if the schema (or any nested schema) declares ``oneOf``.
+
+    Bedrock strict mode rejects any tool whose input schema contains ``oneOf``.
+    """
+    if isinstance(schema, dict):
+        if "oneOf" in schema:
+            return True
+        return any(schema_contains_one_of(value) for value in schema.values())
+    if isinstance(schema, list):
+        return any(schema_contains_one_of(item) for item in schema)
+    return False
+
+
+def count_optional_properties(schema: Any) -> int:
+    """Count optional object properties in a schema, recursively.
+
+    A property is optional when it is declared under ``properties`` but not listed in
+    the sibling ``required`` array. Used to estimate Bedrock's aggregate strict-mode
+    cap on optional parameters.
+    """
+    if isinstance(schema, list):
+        return sum(count_optional_properties(item) for item in schema)
+    if not isinstance(schema, dict):
+        return 0
+
+    total = 0
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        required = schema.get("required") or []
+        required_set = set(required) if isinstance(required, list) else set()
+        for name, prop_schema in properties.items():
+            if name not in required_set:
+                total += 1
+            total += count_optional_properties(prop_schema)
+
+    for key in ("items", "anyOf", "allOf", "oneOf", "$defs", "definitions"):
+        if key in schema:
+            total += count_optional_properties(schema[key])
+
+    return total
+
 
 def ensure_strict_json_schema(
     schema: dict[str, Any],
