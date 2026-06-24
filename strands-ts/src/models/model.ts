@@ -333,7 +333,7 @@ export abstract class Model<T extends BaseModelConfig = BaseModelConfig> {
     try {
       // State maintained in closure
       let messageRole: Role | null = null
-      const contentBlocks: ContentBlock[] = []
+      let contentBlocks: ContentBlock[] = []
       let accumulatedText = ''
       let accumulatedToolInput = ''
       let toolName = ''
@@ -436,6 +436,7 @@ export abstract class Model<T extends BaseModelConfig = BaseModelConfig> {
           case 'modelMessageStopEvent':
             // Store message and stop reason
             if (messageRole) {
+              contentBlocks = contentBlocks.filter((block) => !(block instanceof TextBlock && block.text === ''))
               stoppedMessage = new Message({
                 role: messageRole,
                 content: [...contentBlocks],
