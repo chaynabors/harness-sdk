@@ -174,6 +174,22 @@ def test_handle_content_block_start(chunk: ContentBlockStartEvent, exp_tool_use)
             {"current_tool_use": {"input": '{"key": '}},
             {"current_tool_use": {"input": '{"key": '}},
         ),
+        # Tool Use - toolUseId and name in delta (Kimi shape)
+        (
+            {"delta": {"toolUse": {"toolUseId": "k1", "name": "myTool", "input": '{"k": "v"}'}}},
+            {"type": "tool_use_stream"},
+            {"current_tool_use": {}},
+            {"current_tool_use": {"toolUseId": "k1", "name": "myTool", "input": '{"k": "v"}'}},
+            {"current_tool_use": {"toolUseId": "k1", "name": "myTool", "input": '{"k": "v"}'}},
+        ),
+        # Tool Use - delta does not overwrite existing toolUseId/name
+        (
+            {"delta": {"toolUse": {"toolUseId": "late", "name": "other", "input": "}"}}},
+            {"type": "tool_use_stream"},
+            {"current_tool_use": {"toolUseId": "k1", "name": "myTool", "input": '{"k": "v"'}},
+            {"current_tool_use": {"toolUseId": "k1", "name": "myTool", "input": '{"k": "v"}'}},
+            {"current_tool_use": {"toolUseId": "k1", "name": "myTool", "input": '{"k": "v"}'}},
+        ),
         # Text
         (
             {"delta": {"text": " world"}},
