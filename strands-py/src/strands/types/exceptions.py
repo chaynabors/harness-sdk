@@ -1,6 +1,9 @@
 """Exception-related type definitions for the SDK."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .content import Message
 
 
 class EventLoopException(Exception):
@@ -24,14 +27,22 @@ class MaxTokensReachedException(Exception):
     This exception is raised when the model stops generating tokens because it has reached the maximum number of
     tokens allowed for output generation. This can occur when the model's max_tokens parameter is set too low for
     the complexity of the response, or when the model naturally reaches its configured output limit during generation.
+
+    The agent instance remains usable after this exception is raised: incomplete tool uses are scrubbed from the
+    conversation history and locks/signals are released. Callers can inspect ``last_message`` for any partial
+    output the model produced before the limit was hit, then continue invoking the same agent.
     """
 
-    def __init__(self, message: str):
-        """Initialize the exception with an error message and the incomplete message object.
+    def __init__(self, message: str, last_message: "Message | None" = None):
+        """Initialize the exception with an error message and the recovered partial message.
 
         Args:
-            message: The error message describing the token limit issue
+            message: The error message describing the token limit issue.
+            last_message: The recovered assistant message containing whatever content the model produced
+                before hitting the token limit, with any incomplete tool uses replaced by explanatory text.
+                ``None`` when no partial message is available.
         """
+        self.last_message = last_message
         super().__init__(message)
 
 
