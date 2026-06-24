@@ -639,6 +639,55 @@ def test_fix_broken_tool_use_does_not_affect_normal_conversations(session_manage
     assert fixed_messages == messages
 
 
+def test_fix_broken_tool_use_removes_orphaned_tool_result_mid_conversation(session_manager):
+    """Test that a mid-conversation toolResult with no matching toolUse is dropped."""
+    messages = [
+        {"role": "user", "content": [{"text": "Where do I live?"}]},
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "toolUse": {
+                        "toolUseId": "valid-tool-use-1",
+                        "name": "get_location",
+                        "input": {},
+                    }
+                }
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "toolResult": {
+                        "toolUseId": "valid-tool-use-1",
+                        "status": "success",
+                        "content": [{"text": "Seattle, USA"}],
+                    }
+                },
+                {
+                    "toolResult": {
+                        "toolUseId": "orphaned-tool-use-99",
+                        "status": "success",
+                        "content": [{"text": "stale"}],
+                    }
+                },
+            ],
+        },
+        {"role": "assistant", "content": [{"text": "You live in Seattle, USA."}]},
+        {"role": "user", "content": [{"text": "Thanks!"}]},
+    ]
+
+    fixed_messages = session_manager._fix_broken_tool_use(messages)
+
+    # The mid-conversation user message should retain only the matching toolResult
+    assert len(fixed_messages) == 5
+    tool_result_message = fixed_messages[2]
+    assert tool_result_message["role"] == "user"
+    assert len(tool_result_message["content"]) == 1
+    assert tool_result_message["content"][0]["toolResult"]["toolUseId"] == "valid-tool-use-1"
+
+
 # ============================================================================
 # Conditional Sync Tests
 # ============================================================================
