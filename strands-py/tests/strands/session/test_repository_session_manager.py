@@ -1,5 +1,6 @@
 """Tests for AgentSessionManager."""
 
+import copy
 from unittest.mock import Mock
 
 import pytest
@@ -427,11 +428,57 @@ def test_fix_broken_tool_use_ignores_last_message(session_manager):
             ],
         },
     ]
+    original = copy.deepcopy(messages)
 
     fixed_messages = session_manager._fix_broken_tool_use(messages)
 
     # Should remain unchanged since toolUse is in last message
-    assert fixed_messages == messages
+    assert fixed_messages == original
+
+
+def test_fix_broken_tool_use_ignores_single_orphaned_tool_use(session_manager):
+    """Test that a conversation with only a single orphaned toolUse is left untouched."""
+    messages = [
+        {
+            "role": "assistant",
+            "content": [
+                {"toolUse": {"toolUseId": "only-message-123", "name": "test_tool", "input": {"input": "test"}}}
+            ],
+        },
+    ]
+    original = copy.deepcopy(messages)
+
+    fixed_messages = session_manager._fix_broken_tool_use(messages)
+
+    assert fixed_messages == original
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Bug #2028: enumerate+insert iteration skips the trailing orphaned toolUse so it never gets a toolResult.",
+)
+def test_fix_broken_tool_use_consecutive_orphaned_tool_uses(session_manager):
+    """Consecutive orphaned toolUse messages should each receive an inserted toolResult."""
+    messages = [
+        {
+            "role": "assistant",
+            "content": [{"toolUse": {"toolUseId": "first-123", "name": "test_tool", "input": {"input": "test1"}}}],
+        },
+        {
+            "role": "assistant",
+            "content": [{"toolUse": {"toolUseId": "second-456", "name": "test_tool", "input": {"input": "test2"}}}],
+        },
+    ]
+
+    fixed_messages = session_manager._fix_broken_tool_use(messages)
+
+    assert len(fixed_messages) == 4
+    assert fixed_messages[0]["content"][0]["toolUse"]["toolUseId"] == "first-123"
+    assert fixed_messages[1]["role"] == "user"
+    assert fixed_messages[1]["content"][0]["toolResult"]["toolUseId"] == "first-123"
+    assert fixed_messages[2]["content"][0]["toolUse"]["toolUseId"] == "second-456"
+    assert fixed_messages[3]["role"] == "user"
+    assert fixed_messages[3]["content"][0]["toolResult"]["toolUseId"] == "second-456"
 
 
 def test_fix_broken_tool_use_does_not_change_valid_message(session_manager):
