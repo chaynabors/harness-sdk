@@ -163,8 +163,18 @@ class FunctionToolMetadata:
         final_description = description
         if final_description is None:
             final_description = self.param_descriptions.get(param_name) or f"Parameter {param_name}"
-        # Create FieldInfo object from scratch
-        final_field = Field(default=param_default, description=final_description)
+        # Create FieldInfo object from scratch. If the parameter's default is already a
+        # FieldInfo (e.g. Field(default_factory=list)), unwrap it so we don't nest a
+        # non-JSON-serializable FieldInfo inside another Field's default value.
+        if isinstance(param_default, FieldInfo):
+            field_kwargs: dict[str, Any] = {"description": param_default.description or final_description}
+            if param_default.default_factory is not None:
+                field_kwargs["default_factory"] = param_default.default_factory
+            else:
+                field_kwargs["default"] = param_default.default
+            final_field = Field(**field_kwargs)
+        else:
+            final_field = Field(default=param_default, description=final_description)
 
         return actual_type, final_field
 
