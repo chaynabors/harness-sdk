@@ -72,10 +72,9 @@ async def test_swarm_cancel_node(swarm):
 @pytest.mark.asyncio
 async def test_graph_cancel_node(graph):
     tru_cancel_event = None
-    with pytest.raises(RuntimeError, match="test cancel"):
-        async for event in graph.stream_async("What is the weather"):
-            if event.get("type") == "multiagent_node_cancel":
-                tru_cancel_event = event
+    async for event in graph.stream_async("What is the weather"):
+        if event.get("type") == "multiagent_node_cancel":
+            tru_cancel_event = event
 
     exp_cancel_event = MultiAgentNodeCancelEvent(node_id="weather", message="test cancel")
     assert tru_cancel_event == exp_cancel_event
@@ -83,5 +82,5 @@ async def test_graph_cancel_node(graph):
     state = graph.state
 
     tru_status = state.status
-    exp_status = Status.FAILED
+    exp_status = Status.COMPLETED
     assert tru_status == exp_status

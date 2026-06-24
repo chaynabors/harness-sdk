@@ -1001,9 +1001,13 @@ class Graph(MultiAgentBase):
                 cancel_message = (
                     before_event.cancel_node if isinstance(before_event.cancel_node, str) else "node cancelled by user"
                 )
-                logger.debug("reason=<%s> | cancelling execution", cancel_message)
+                logger.debug("reason=<%s> | skipping node execution", cancel_message)
                 yield MultiAgentNodeCancelEvent(node.node_id, cancel_message)
-                raise RuntimeError(cancel_message)
+                node.execution_status = Status.COMPLETED
+                node.execution_time = round((time.time() - start_time) * 1000)
+                self.state.completed_nodes.add(node)
+                self.state.execution_order.append(node)
+                return
 
             # Build node input from satisfied dependencies
             node_input = self._build_node_input(node)
