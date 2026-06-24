@@ -704,6 +704,7 @@ class Agent(AgentBase):
         structured_output_prompt: str | None = None,
         idempotency_token: Any = None,
         limits: Limits | None = None,
+        system_prompt: str | list[SystemContentBlock] | None = None,
         **kwargs: Any,
     ) -> AgentResult:
         """Process a natural language prompt through the agent's event loop.
@@ -734,6 +735,9 @@ class Agent(AgentBase):
                 ``stop_reason`` (e.g. ``"limit_turns"``); no exception is raised. Token
                 caps are soft — a single oversized model response can overshoot the budget
                 by one turn, since checks run at turn boundaries, not within a model call.
+            system_prompt: Optional per-invocation system prompt override. When provided, the
+                agent's configured ``system_prompt`` is replaced for the duration of this call
+                only and then restored, leaving the agent's persistent system prompt unchanged.
             **kwargs: Additional parameters to pass through the event loop.[Deprecating]
 
         Returns:
@@ -760,6 +764,7 @@ class Agent(AgentBase):
                 structured_output_prompt=structured_output_prompt,
                 idempotency_token=idempotency_token,
                 limits=limits,
+                system_prompt=system_prompt,
                 **kwargs,
             )
         )
@@ -786,6 +791,7 @@ class Agent(AgentBase):
         structured_output_prompt: str | None = None,
         idempotency_token: Any = None,
         limits: Limits | None = None,
+        system_prompt: str | list[SystemContentBlock] | None = None,
         **kwargs: Any,
     ) -> AgentResult:
         """Process a natural language prompt through the agent's event loop.
@@ -816,6 +822,9 @@ class Agent(AgentBase):
                 ``stop_reason`` (e.g. ``"limit_turns"``); no exception is raised. Token
                 caps are soft — a single oversized model response can overshoot the budget
                 by one turn, since checks run at turn boundaries, not within a model call.
+            system_prompt: Optional per-invocation system prompt override. When provided, the
+                agent's configured ``system_prompt`` is replaced for the duration of this call
+                only and then restored, leaving the agent's persistent system prompt unchanged.
             **kwargs: Additional parameters to pass through the event loop.[Deprecating]
 
         Returns:
@@ -840,6 +849,7 @@ class Agent(AgentBase):
             structured_output_prompt=structured_output_prompt,
             idempotency_token=idempotency_token,
             limits=limits,
+            system_prompt=system_prompt,
             **kwargs,
         )
         async for event in events:
@@ -1071,6 +1081,7 @@ class Agent(AgentBase):
         structured_output_prompt: str | None = None,
         idempotency_token: Any = None,
         limits: Limits | None = None,
+        system_prompt: str | list[SystemContentBlock] | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[Any]:
         """Process a natural language prompt and yield events as an async iterator.
@@ -1101,6 +1112,9 @@ class Agent(AgentBase):
                 ``stop_reason`` (e.g. ``"limit_turns"``); no exception is raised. Token
                 caps are soft — a single oversized model response can overshoot the budget
                 by one turn, since checks run at turn boundaries, not within a model call.
+            system_prompt: Optional per-invocation system prompt override. When provided, the
+                agent's configured ``system_prompt`` is replaced for the duration of this call
+                only and then restored, leaving the agent's persistent system prompt unchanged.
             **kwargs: Additional parameters to pass to the event loop.[Deprecating]
 
         Yields:
@@ -1155,7 +1169,14 @@ class Agent(AgentBase):
 
         result: AgentResult | None = None
 
+        original_system_prompt = self._system_prompt
+        original_system_prompt_content = self._system_prompt_content
+        system_prompt_overridden = system_prompt is not None
+
         try:
+            if system_prompt_overridden:
+                self._system_prompt, self._system_prompt_content = split_system_prompt(system_prompt)
+
             self._interrupt_state.resume(prompt)
 
             self.event_loop_metrics.reset_usage_metrics()
@@ -1213,6 +1234,10 @@ class Agent(AgentBase):
         finally:
             # Clear cancel signal to allow agent reuse after cancellation
             self._cancel_signal.clear()
+
+            if system_prompt_overridden:
+                self._system_prompt = original_system_prompt
+                self._system_prompt_content = original_system_prompt_content
 
             self._concurrency.complete(begin.registered_token, result=result)
             self._concurrency.release_lock()
