@@ -270,18 +270,20 @@ class GeminiModel(Model):
         Return:
             Gemini tool list.
         """
-        tools = [
-            genai.types.Tool(
-                function_declarations=[
-                    genai.types.FunctionDeclaration(
-                        description=tool_spec["description"],
-                        name=tool_spec["name"],
-                        parameters_json_schema=tool_spec["inputSchema"]["json"],
-                    )
-                    for tool_spec in tool_specs or []
-                ],
-            ),
-        ]
+        tools: list[genai.types.Tool | Any] = []
+        if tool_specs:
+            tools.append(
+                genai.types.Tool(
+                    function_declarations=[
+                        genai.types.FunctionDeclaration(
+                            description=tool_spec["description"],
+                            name=tool_spec["name"],
+                            parameters_json_schema=tool_spec["inputSchema"]["json"],
+                        )
+                        for tool_spec in tool_specs
+                    ],
+                ),
+            )
         if self.config.get("gemini_tools"):
             tools.extend(self.config["gemini_tools"])
         return tools
@@ -304,9 +306,10 @@ class GeminiModel(Model):
         Returns:
             Gemini request config.
         """
+        tools = self._format_request_tools(tool_specs)
         return genai.types.GenerateContentConfig(
             system_instruction=system_prompt,
-            tools=self._format_request_tools(tool_specs),
+            tools=tools or None,
             **(params or {}),
         )
 
