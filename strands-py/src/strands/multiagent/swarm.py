@@ -780,9 +780,9 @@ class Swarm(MultiAgentBase):
                             if isinstance(before_event.cancel_node, str)
                             else "node cancelled by user"
                         )
-                        logger.debug("reason=<%s> | cancelling execution", cancel_message)
+                        logger.debug("reason=<%s> | skipping node execution", cancel_message)
                         yield MultiAgentNodeCancelEvent(current_node.node_id, cancel_message)
-                        self.state.completion_status = Status.FAILED
+                        self.state.completion_status = Status.COMPLETED
                         break
 
                     node_stream = self._stream_with_timeout(

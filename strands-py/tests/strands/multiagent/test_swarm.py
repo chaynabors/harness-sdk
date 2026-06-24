@@ -1270,7 +1270,7 @@ async def test_swarm_cancel_node(cancel_node, cancel_message, alist):
     assert tru_events == exp_events
 
     tru_status = swarm.state.completion_status
-    exp_status = Status.FAILED
+    exp_status = Status.COMPLETED
     assert tru_status == exp_status
 
 

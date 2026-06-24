@@ -60,7 +60,7 @@ async def test_swarm_cancel_node(swarm):
     assert tru_cancel_event == exp_cancel_event
 
     tru_status = multiagent_result.status
-    exp_status = Status.FAILED
+    exp_status = Status.COMPLETED
     assert tru_status == exp_status
 
     assert len(multiagent_result.node_history) == 1
