@@ -331,6 +331,16 @@ class ToolExecutor(abc.ABC):
                 yield event
 
             if isinstance(event, ToolInterruptEvent):
+                tool_duration = time.time() - tool_start_time
+                interrupt_result: ToolResult = {
+                    "toolUseId": str(tool_use.get("toolUseId")),
+                    "status": "error",
+                    "content": [{"text": "Tool execution was interrupted"}],
+                }
+                message = Message(role="user", content=[{"toolResult": interrupt_result}])
+                if ToolExecutor._is_agent(agent):
+                    agent.event_loop_metrics.add_tool_usage(tool_use, tool_duration, tool_trace, False, message)
+                cycle_trace.add_child(tool_trace)
                 tracer.end_tool_call_span(tool_call_span, tool_result=None)
                 return
 

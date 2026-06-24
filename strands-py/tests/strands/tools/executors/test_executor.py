@@ -224,6 +224,23 @@ async def test_executor_stream_with_trace(
     assert isinstance(cycle_trace.add_child.call_args[0][0], Trace)
 
 
+@pytest.mark.asyncio
+async def test_executor_stream_with_trace_records_metrics_on_interrupt(
+    executor, agent, tool_results, cycle_trace, cycle_span, invocation_state, alist
+):
+    tool_use: ToolUse = {"name": "interrupt_tool", "toolUseId": "test_tool_id", "input": {}}
+    stream = executor._stream_with_trace(agent, tool_use, tool_results, cycle_trace, cycle_span, invocation_state)
+
+    await alist(stream)
+
+    agent.event_loop_metrics.add_tool_usage.assert_called_once()
+    call_args = agent.event_loop_metrics.add_tool_usage.call_args
+    assert call_args.args[0] == tool_use
+    assert call_args.args[3] is False
+    cycle_trace.add_child.assert_called_once()
+    assert isinstance(cycle_trace.add_child.call_args.args[0], Trace)
+
+
 @pytest.mark.parametrize(
     ("cancel_tool", "cancel_message"),
     [(True, "tool cancelled by user"), ("user cancel message", "user cancel message")],
