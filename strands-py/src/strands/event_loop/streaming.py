@@ -448,7 +448,10 @@ async def process_stream(
             state, typed_event = handle_content_block_delta(chunk["contentBlockDelta"], state)
             yield typed_event
         elif "contentBlockStop" in chunk:
+            had_text = bool(state["text"]) and not state["current_tool_use"]
             state = handle_content_block_stop(state)
+            if had_text:
+                yield TextStreamEvent(delta={"text": ""}, text="", complete=True)
         elif "messageStop" in chunk:
             stop_reason = handle_message_stop(chunk["messageStop"], state["message"].get("content", []))
         elif "metadata" in chunk:

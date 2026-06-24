@@ -129,6 +129,13 @@ async def test_stream_e2e_success(alist):
             "delta": {"text": "Okay invoking normal tool"},
         },
         {"event": {"contentBlockStop": {}}},
+        {
+            **any_props,
+            "arg1": 1013,
+            "complete": True,
+            "data": "",
+            "delta": {"text": ""},
+        },
         {"event": {"contentBlockStart": {"start": {"toolUse": {"name": "normal_tool", "toolUseId": "123"}}}}},
         {"event": {"contentBlockDelta": {"delta": {"toolUse": {"input": "{}"}}}}},
         {
@@ -183,6 +190,18 @@ async def test_stream_e2e_success(alist):
             "tool_config": tool_config,
         },
         {"event": {"contentBlockStop": {}}},
+        {
+            **any_props,
+            "arg1": 1013,
+            "complete": True,
+            "data": "",
+            "delta": {"text": ""},
+            "event_loop_parent_cycle_id": ANY,
+            "messages": ANY,
+            "model": ANY,
+            "system_prompt": None,
+            "tool_config": tool_config,
+        },
         {"event": {"contentBlockStart": {"start": {"toolUse": {"name": "async_tool", "toolUseId": "1234"}}}}},
         {"event": {"contentBlockDelta": {"delta": {"toolUse": {"input": "{}"}}}}},
         {
@@ -242,6 +261,18 @@ async def test_stream_e2e_success(alist):
             "tool_config": tool_config,
         },
         {"event": {"contentBlockStop": {}}},
+        {
+            **any_props,
+            "arg1": 1013,
+            "complete": True,
+            "data": "",
+            "delta": {"text": ""},
+            "event_loop_parent_cycle_id": ANY,
+            "messages": ANY,
+            "model": ANY,
+            "system_prompt": None,
+            "tool_config": tool_config,
+        },
         {"event": {"contentBlockStart": {"start": {"toolUse": {"name": "streaming_tool", "toolUseId": "12345"}}}}},
         {"event": {"contentBlockDelta": {"delta": {"toolUse": {"input": "{}"}}}}},
         {
@@ -309,6 +340,18 @@ async def test_stream_e2e_success(alist):
             "tool_config": tool_config,
         },
         {"event": {"contentBlockStop": {}}},
+        {
+            **any_props,
+            "arg1": 1013,
+            "complete": True,
+            "data": "",
+            "delta": {"text": ""},
+            "event_loop_parent_cycle_id": ANY,
+            "messages": ANY,
+            "model": ANY,
+            "system_prompt": None,
+            "tool_config": tool_config,
+        },
         {"event": {"messageStop": {"stopReason": "end_turn"}}},
         {"message": {"content": [{"text": "I invoked the tools!"}], "role": "assistant", "metadata": ANY}},
         {
@@ -373,6 +416,13 @@ async def test_stream_e2e_throttle_and_redact(alist, mock_sleep):
             "delta": {"text": "INPUT BLOCKED!"},
         },
         {"event": {"contentBlockStop": {}}},
+        {
+            **any_props,
+            "arg1": 1013,
+            "complete": True,
+            "data": "",
+            "delta": {"text": ""},
+        },
         {"event": {"messageStop": {"stopReason": "guardrail_intervened"}}},
         {"message": {"content": [{"text": "INPUT BLOCKED!"}], "role": "assistant", "metadata": ANY}},
         {
@@ -437,6 +487,12 @@ async def test_stream_e2e_reasoning_redacted_content(alist):
             "delta": {"text": "Response with redacted reasoning"},
         },
         {"event": {"contentBlockStop": {}}},
+        {
+            **any_props,
+            "complete": True,
+            "data": "",
+            "delta": {"text": ""},
+        },
         {"event": {"messageStop": {"stopReason": "end_turn"}}},
         {
             "message": {

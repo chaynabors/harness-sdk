@@ -154,9 +154,12 @@ class ToolUseStreamEvent(ModelStreamEvent):
 class TextStreamEvent(ModelStreamEvent):
     """Event emitted during text content streaming."""
 
-    def __init__(self, delta: ContentBlockDelta, text: str) -> None:
+    def __init__(self, delta: ContentBlockDelta, text: str, complete: bool = False) -> None:
         """Initialize with delta and text content."""
-        super().__init__({"data": text, "delta": delta})
+        data: dict[str, Any] = {"data": text, "delta": delta}
+        if complete:
+            data["complete"] = True
+        super().__init__(data)
 
 
 class CitationStreamEvent(ModelStreamEvent):

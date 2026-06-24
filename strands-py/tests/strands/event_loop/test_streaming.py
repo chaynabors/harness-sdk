@@ -852,6 +852,7 @@ def test_extract_usage_metrics_empty_metadata():
                     },
                 },
                 {"event": {"contentBlockStop": {}}},
+                {"complete": True, "data": "", "delta": {"text": ""}},
                 {"event": {"messageStop": {"stopReason": "end_turn"}}},
                 {
                     "event": {
@@ -968,6 +969,7 @@ async def test_process_stream(response, exp_events, agenerator, alist):
                 {"event": {"contentBlockDelta": {"delta": {"text": "Hello!"}}}},
                 {"data": "Hello!", "delta": {"text": "Hello!"}},
                 {"event": {"contentBlockStop": {}}},
+                {"complete": True, "data": "", "delta": {"text": ""}},
                 {"event": {"messageStop": {"stopReason": "guardrail_intervened"}}},
                 {
                     "event": {
@@ -1193,6 +1195,13 @@ async def test_stream_messages(agenerator, alist):
         {
             "event": {
                 "contentBlockStop": {},
+            },
+        },
+        {
+            "complete": True,
+            "data": "",
+            "delta": {
+                "text": "",
             },
         },
         {
