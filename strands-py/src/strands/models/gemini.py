@@ -270,18 +270,22 @@ class GeminiModel(Model):
         Return:
             Gemini tool list.
         """
-        tools = [
-            genai.types.Tool(
-                function_declarations=[
-                    genai.types.FunctionDeclaration(
-                        description=tool_spec["description"],
-                        name=tool_spec["name"],
-                        parameters_json_schema=tool_spec["inputSchema"]["json"],
-                    )
-                    for tool_spec in tool_specs or []
-                ],
-            ),
-        ]
+        # Vertex AI rejects Tool entries that have no initialized field, so only emit a
+        # function_declarations Tool when there is at least one declaration to include.
+        tools: list[genai.types.Tool | Any] = []
+        if tool_specs:
+            tools.append(
+                genai.types.Tool(
+                    function_declarations=[
+                        genai.types.FunctionDeclaration(
+                            description=tool_spec["description"],
+                            name=tool_spec["name"],
+                            parameters_json_schema=tool_spec["inputSchema"]["json"],
+                        )
+                        for tool_spec in tool_specs
+                    ],
+                ),
+            )
         if self.config.get("gemini_tools"):
             tools.extend(self.config["gemini_tools"])
         return tools
@@ -304,11 +308,16 @@ class GeminiModel(Model):
         Returns:
             Gemini request config.
         """
-        return genai.types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            tools=self._format_request_tools(tool_specs),
+        # Vertex AI rejects requests that include a tools field with no initialized entries,
+        # so only set it when there is at least one tool to send.
+        tools = self._format_request_tools(tool_specs)
+        config_kwargs: dict[str, Any] = {
+            "system_instruction": system_prompt,
             **(params or {}),
-        )
+        }
+        if tools:
+            config_kwargs["tools"] = tools
+        return genai.types.GenerateContentConfig(**config_kwargs)
 
     def _format_request(
         self,
