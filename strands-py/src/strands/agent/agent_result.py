@@ -5,9 +5,10 @@ This module defines the AgentResult class which encapsulates the complete respon
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Generic, cast
 
 from pydantic import BaseModel
+from typing_extensions import Self, TypeVar
 
 from ..experimental.checkpoint import Checkpoint
 from ..interrupt import Interrupt
@@ -15,9 +16,11 @@ from ..telemetry.metrics import EventLoopMetrics
 from ..types.content import Message
 from ..types.streaming import StopReason
 
+T = TypeVar("T", bound=BaseModel, default=BaseModel)
+
 
 @dataclass
-class AgentResult:
+class AgentResult(Generic[T]):
     """Represents the last result of invoking an agent with a prompt.
 
     Attributes:
@@ -37,7 +40,7 @@ class AgentResult:
     metrics: EventLoopMetrics
     state: Any
     interrupts: Sequence[Interrupt] | None = None
-    structured_output: BaseModel | None = None
+    structured_output: T | None = None
     checkpoint: Checkpoint | None = None
 
     @property
@@ -91,7 +94,7 @@ class AgentResult:
         return result
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AgentResult":
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         """Rehydrate an AgentResult from persisted JSON.
 
         Args:
