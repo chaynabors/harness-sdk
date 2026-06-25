@@ -9,7 +9,6 @@ The Agent interface supports two complementary interaction patterns:
 2. Method-style for direct tool access: `agent.tool.tool_name(param1="value")`
 """
 
-import asyncio
 import copy
 import logging
 import threading
@@ -1132,7 +1131,7 @@ class Agent(AgentBase):
 
         if begin.waiting_on is not None:
             logger.debug("idempotency_token=<%s> | duplicate request detected, waiting for original", idempotency_token)
-            await asyncio.to_thread(begin.waiting_on.done.wait)
+            await begin.waiting_on.register_waiter()
             if begin.waiting_on.error is not None:
                 raise begin.waiting_on.error
             if begin.waiting_on.result is not None:
@@ -1215,7 +1214,8 @@ class Agent(AgentBase):
             self._cancel_signal.clear()
 
             self._concurrency.complete(begin.registered_token, result=result)
-            self._concurrency.release_lock()
+            if self._concurrency.mode == ConcurrentInvocationMode.THROW:
+                self._concurrency.release_lock()
 
     async def _run_loop(
         self,
