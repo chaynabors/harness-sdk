@@ -55,6 +55,13 @@ _MODELS_INCLUDE_STATUS = [
     "anthropic.claude",
 ]
 
+# Models that hallucinate when tool results contain json content blocks; for these,
+# json content is serialized to text instead.
+# See https://github.com/strands-agents/harness-sdk/issues/1095.
+_MODELS_STRINGIFY_TOOL_RESULT_JSON = [
+    "amazon.nova",
+]
+
 # Cache of model IDs for which CountTokens API calls should be skipped.
 _SKIP_COUNT_TOKENS_MODELS: set[str] = set()
 
@@ -667,11 +674,15 @@ class BedrockModel(Model):
             # cross-model compatibility. This follows the same pattern as the
             # TypeScript SDK's _formatMessages in bedrock.ts.
             tool_result_content_list = tool_result.get("content") or [{"text": ""}]
+            stringify_json = any(model in self.config["model_id"] for model in _MODELS_STRINGIFY_TOOL_RESULT_JSON)
             formatted_content: list[dict[str, Any]] = []
             for tool_result_content in tool_result_content_list:
                 if "json" in tool_result_content:
                     # Handle json field since not in ContentBlock but valid in ToolResultContent
-                    formatted_content.append({"json": tool_result_content["json"]})
+                    if stringify_json:
+                        formatted_content.append({"text": json.dumps(tool_result_content["json"])})
+                    else:
+                        formatted_content.append({"json": tool_result_content["json"]})
                 else:
                     formatted_message_content = self._format_request_message_content(
                         cast(ContentBlock, tool_result_content)
