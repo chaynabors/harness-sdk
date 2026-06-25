@@ -1954,6 +1954,38 @@ def test_format_request_message_content_preserves_nonempty_tool_result_content(m
     assert tool_result["content"] == [{"text": "some result"}]
 
 
+@pytest.mark.parametrize(
+    "model_id, expected_content",
+    [
+        ("us.amazon.nova-pro-v1:0", [{"text": '{"rows": [{"id": 1}]}'}]),
+        ("us.anthropic.claude-sonnet-4-20250514-v1:0", [{"json": {"rows": [{"id": 1}]}}]),
+    ],
+)
+def test_format_request_stringifies_tool_result_json_for_nova(bedrock_client, model_id, expected_content):
+    _ = bedrock_client
+    model = BedrockModel(model_id=model_id)
+    messages = [
+        {"role": "user", "content": [{"text": "List tables"}]},
+        {
+            "role": "assistant",
+            "content": [
+                {"toolUse": {"toolUseId": "tool_001", "name": "run_query", "input": {"sql": "SELECT 1"}}},
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"toolResult": {"toolUseId": "tool_001", "content": [{"json": {"rows": [{"id": 1}]}}]}},
+            ],
+        },
+    ]
+
+    formatted_request = model.format_request(messages)
+
+    tool_result = formatted_request["messages"][2]["content"][0]["toolResult"]
+    assert tool_result["content"] == expected_content
+
+
 def test_format_request_removes_status_field_when_configured(model, model_id):
     model.update_config(include_tool_result_status=False)
 
