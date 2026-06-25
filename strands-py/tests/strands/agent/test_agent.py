@@ -798,6 +798,7 @@ def test_agent__call__callback(mock_model, agent, callback_handler, agenerator):
             event_loop_cycle_trace=unittest.mock.ANY,
             reasoning=True,
             reasoningText="value",
+            reasoning_text="value",
             request_state={},
         ),
         unittest.mock.call(event={"contentBlockDelta": {"delta": {"reasoningContent": {"signature": "value"}}}}),

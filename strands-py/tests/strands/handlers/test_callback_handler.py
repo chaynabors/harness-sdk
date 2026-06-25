@@ -30,24 +30,30 @@ def test_call_with_empty_args(handler, mock_print):
     mock_print.assert_not_called()
 
 
-def test_call_handler_reasoningText(handler, mock_print):
-    """Test calling the handler with reasoningText."""
-    handler(reasoningText="This is reasoning text")
+def test_call_handler_reasoning_text(handler, mock_print):
+    """Test calling the handler with reasoning_text."""
+    handler(reasoning_text="This is reasoning text")
     # Should print reasoning text without newline
     mock_print.assert_called_once_with("This is reasoning text", end="")
 
 
-def test_call_without_reasoningText(handler, mock_print):
-    """Test calling the handler without reasoningText argument."""
+def test_call_handler_reasoning_text_legacy_camel_case(handler, mock_print):
+    """Test that the deprecated camelCase ``reasoningText`` kwarg is still honored."""
+    handler(reasoningText="This is reasoning text")
+    mock_print.assert_called_once_with("This is reasoning text", end="")
+
+
+def test_call_without_reasoning_text(handler, mock_print):
+    """Test calling the handler without reasoning_text argument."""
     handler(data="Some output")
-    # Should only print data, not reasoningText
+    # Should only print data, not reasoning_text
     mock_print.assert_called_once_with("Some output", end="")
 
 
-def test_call_with_reasoningText_and_data(handler, mock_print):
-    """Test calling the handler with both reasoningText and data."""
-    handler(reasoningText="Reasoning", data="Output")
-    # Should print reasoningText and data, both without newline
+def test_call_with_reasoning_text_and_data(handler, mock_print):
+    """Test calling the handler with both reasoning_text and data."""
+    handler(reasoning_text="Reasoning", data="Output")
+    # Should print reasoning_text and data, both without newline
     calls = [
         unittest.mock.call("Reasoning", end=""),
         unittest.mock.call("Output", end=""),

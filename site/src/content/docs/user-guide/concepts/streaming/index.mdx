@@ -62,10 +62,15 @@ Each event emitted from the TypeScript agent is a class with a `type` attribute 
 
 - **`data`**: Text chunk from the model's output
 - **`delta`**: Raw delta content from the model
-- **`reasoning`**: True for reasoning events
-    - **`reasoningText`**: Text from reasoning process
-    - **`reasoning_signature`**: Signature from reasoning process
-    - **`redactedContent`**: Reasoning content redacted by the model
+- Reasoning events expose the following keys:
+    - **`reasoning_text`**: Text from the reasoning process
+    - **`reasoning_signature`**: Signature from the reasoning process
+    - **`reasoning_redacted_content`**: Reasoning content redacted by the model
+- **Deprecated reasoning keys** (still emitted for backwards compatibility, removed in a future major release):
+    - **`reasoning`**: `True` for reasoning events; prefer matching on the `reasoning_text` /
+      `reasoning_signature` / `reasoning_redacted_content` keys directly
+    - **`reasoningText`**: alias for `reasoning_text`
+    - **`reasoningRedactedContent`**: alias for `reasoning_redacted_content`
 </Tab>
 <Tab label="TypeScript">
 

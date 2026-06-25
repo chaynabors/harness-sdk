@@ -168,27 +168,58 @@ class CitationStreamEvent(ModelStreamEvent):
 
 
 class ReasoningTextStreamEvent(ModelStreamEvent):
-    """Event emitted during reasoning text streaming."""
+    """Event emitted during reasoning text streaming.
+
+    The ``reasoningText`` key and the ``reasoning`` flag are deprecated; prefer
+    ``reasoning_text``. They will be removed in a future major release.
+    """
 
     def __init__(self, delta: ContentBlockDelta, reasoning_text: str | None) -> None:
         """Initialize with delta and reasoning text."""
-        super().__init__({"reasoningText": reasoning_text, "delta": delta, "reasoning": True})
+        super().__init__(
+            {
+                "reasoning_text": reasoning_text,
+                "reasoningText": reasoning_text,
+                "reasoning": True,
+                "delta": delta,
+            }
+        )
 
 
 class ReasoningRedactedContentStreamEvent(ModelStreamEvent):
-    """Event emitted during redacted content streaming."""
+    """Event emitted during redacted content streaming.
+
+    The ``reasoningRedactedContent`` key and the ``reasoning`` flag are deprecated;
+    prefer ``reasoning_redacted_content``. They will be removed in a future major release.
+    """
 
     def __init__(self, delta: ContentBlockDelta, redacted_content: bytes | None) -> None:
         """Initialize with delta and redacted content."""
-        super().__init__({"reasoningRedactedContent": redacted_content, "delta": delta, "reasoning": True})
+        super().__init__(
+            {
+                "reasoning_redacted_content": redacted_content,
+                "reasoningRedactedContent": redacted_content,
+                "reasoning": True,
+                "delta": delta,
+            }
+        )
 
 
 class ReasoningSignatureStreamEvent(ModelStreamEvent):
-    """Event emitted during reasoning signature streaming."""
+    """Event emitted during reasoning signature streaming.
+
+    The ``reasoning`` flag is deprecated and will be removed in a future major release.
+    """
 
     def __init__(self, delta: ContentBlockDelta, reasoning_signature: str | None) -> None:
         """Initialize with delta and reasoning signature."""
-        super().__init__({"reasoning_signature": reasoning_signature, "delta": delta, "reasoning": True})
+        super().__init__(
+            {
+                "reasoning_signature": reasoning_signature,
+                "reasoning": True,
+                "delta": delta,
+            }
+        )
 
 
 class ModelStopReason(TypedEvent):

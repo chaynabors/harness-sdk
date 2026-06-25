@@ -424,9 +424,10 @@ async def test_stream_e2e_reasoning_redacted_content(alist):
         {"event": {"contentBlockDelta": {"delta": {"reasoningContent": {"redactedContent": b"test_redacted_data"}}}}},
         {
             **any_props,
+            "reasoning_redacted_content": b"test_redacted_data",
             "reasoningRedactedContent": b"test_redacted_data",
-            "delta": {"reasoningContent": {"redactedContent": b"test_redacted_data"}},
             "reasoning": True,
+            "delta": {"reasoningContent": {"redactedContent": b"test_redacted_data"}},
         },
         {"event": {"contentBlockStop": {}}},
         {"event": {"contentBlockStart": {"start": {}}}},
