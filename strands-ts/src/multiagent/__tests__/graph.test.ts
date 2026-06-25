@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Agent } from '../../agent/agent.js'
+import { AgentPrinter } from '../../agent/printer.js'
 import { MockMessageModel } from '../../__fixtures__/mock-message-model.js'
 import { MockSnapshotStorage } from '../../__fixtures__/mock-storage-provider.js'
 import { collectGenerator } from '../../__fixtures__/model-test-helpers.js'
@@ -714,6 +715,65 @@ describe('Graph', () => {
       expect(cancelEvent).toEqual(
         expect.objectContaining({ nodeId: 'a', state: expect.any(MultiAgentState), message: 'node not ready' })
       )
+    })
+
+    it('does not buffer agent printer output for sequential graphs', async () => {
+      const a = makeAgent('a', 'a-reply')
+      const b = makeAgent('b', 'b-reply')
+      const printerA = new AgentPrinter(() => {})
+      const printerB = new AgentPrinter(() => {})
+      ;(a as unknown as { _printer: AgentPrinter })._printer = printerA
+      ;(b as unknown as { _printer: AgentPrinter })._printer = printerB
+
+      const graph = new Graph({
+        nodes: [a, b],
+        edges: [['a', 'b']],
+      })
+
+      const seenA: unknown[] = []
+      const seenB: unknown[] = []
+      const gen = graph.stream('go')
+      for await (const event of gen) {
+        if (event.type === 'nodeStreamUpdateEvent') {
+          if (event.nodeId === 'a') seenA.push((a as unknown as { _printer: AgentPrinter })._printer)
+          if (event.nodeId === 'b') seenB.push((b as unknown as { _printer: AgentPrinter })._printer)
+        }
+      }
+
+      expect(seenA.length).toBeGreaterThan(0)
+      expect(seenB.length).toBeGreaterThan(0)
+      expect(seenA.every((p) => p === printerA)).toBe(true)
+      expect(seenB.every((p) => p === printerB)).toBe(true)
+    })
+
+    it('buffers agent printer output when topology allows parallel execution', async () => {
+      const a = makeAgent('a', 'a-reply')
+      const b = makeAgent('b', 'b-reply')
+      const printerA = new AgentPrinter(() => {})
+      const printerB = new AgentPrinter(() => {})
+      ;(a as unknown as { _printer: AgentPrinter })._printer = printerA
+      ;(b as unknown as { _printer: AgentPrinter })._printer = printerB
+
+      // Two sources with no edges between them — both can run concurrently.
+      const graph = new Graph({
+        nodes: [a, b],
+        edges: [],
+      })
+
+      const seenA: unknown[] = []
+      const seenB: unknown[] = []
+      const gen = graph.stream('go')
+      for await (const event of gen) {
+        if (event.type === 'nodeStreamUpdateEvent') {
+          if (event.nodeId === 'a') seenA.push((a as unknown as { _printer: AgentPrinter })._printer)
+          if (event.nodeId === 'b') seenB.push((b as unknown as { _printer: AgentPrinter })._printer)
+        }
+      }
+
+      expect(seenA.some((p) => p !== printerA)).toBe(true)
+      expect(seenB.some((p) => p !== printerB)).toBe(true)
+      expect((a as unknown as { _printer: AgentPrinter })._printer).toBe(printerA)
+      expect((b as unknown as { _printer: AgentPrinter })._printer).toBe(printerB)
     })
 
     it('cleans up running nodes when consumer breaks mid-stream', async () => {
