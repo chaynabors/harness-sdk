@@ -22,6 +22,7 @@ from typing import (
     Union,
     cast,
     get_args,
+    overload,
 )
 
 from opentelemetry import trace as trace_api
@@ -701,6 +702,32 @@ class Agent(AgentBase):
         """
         return self._concurrency.mode
 
+    @overload
+    def __call__(
+        self,
+        prompt: AgentInput = ...,
+        *,
+        invocation_state: dict[str, Any] | None = ...,
+        structured_output_model: type[T],
+        structured_output_prompt: str | None = ...,
+        idempotency_token: Any = ...,
+        limits: Limits | None = ...,
+        **kwargs: Any,
+    ) -> AgentResult[T]: ...
+
+    @overload
+    def __call__(
+        self,
+        prompt: AgentInput = ...,
+        *,
+        invocation_state: dict[str, Any] | None = ...,
+        structured_output_model: None = ...,
+        structured_output_prompt: str | None = ...,
+        idempotency_token: Any = ...,
+        limits: Limits | None = ...,
+        **kwargs: Any,
+    ) -> AgentResult: ...
+
     def __call__(
         self,
         prompt: AgentInput = None,
@@ -711,7 +738,7 @@ class Agent(AgentBase):
         idempotency_token: Any = None,
         limits: Limits | None = None,
         **kwargs: Any,
-    ) -> AgentResult:
+    ) -> AgentResult[Any]:
         """Process a natural language prompt through the agent's event loop.
 
         This method implements the conversational interface with multiple input patterns:
@@ -783,6 +810,32 @@ class Agent(AgentBase):
             if self.memory_manager is not None:
                 await self.memory_manager.flush()
 
+    @overload
+    async def invoke_async(
+        self,
+        prompt: AgentInput = ...,
+        *,
+        invocation_state: dict[str, Any] | None = ...,
+        structured_output_model: type[T],
+        structured_output_prompt: str | None = ...,
+        idempotency_token: Any = ...,
+        limits: Limits | None = ...,
+        **kwargs: Any,
+    ) -> AgentResult[T]: ...
+
+    @overload
+    async def invoke_async(
+        self,
+        prompt: AgentInput = ...,
+        *,
+        invocation_state: dict[str, Any] | None = ...,
+        structured_output_model: None = ...,
+        structured_output_prompt: str | None = ...,
+        idempotency_token: Any = ...,
+        limits: Limits | None = ...,
+        **kwargs: Any,
+    ) -> AgentResult: ...
+
     async def invoke_async(
         self,
         prompt: AgentInput = None,
@@ -793,7 +846,7 @@ class Agent(AgentBase):
         idempotency_token: Any = None,
         limits: Limits | None = None,
         **kwargs: Any,
-    ) -> AgentResult:
+    ) -> AgentResult[Any]:
         """Process a natural language prompt through the agent's event loop.
 
         This method implements the conversational interface with multiple input patterns:
