@@ -21,18 +21,20 @@ class PrintingCallbackHandler:
 
         Args:
             **kwargs: Callback event data including:
-                - reasoningText (Optional[str]): Reasoning text to print if provided.
+                - reasoning_text (Optional[str]): Reasoning text to print if provided.
+                - reasoningText (Optional[str]): Deprecated alias for ``reasoning_text``;
+                    accepted for backwards compatibility and removed in a future major release.
                 - data (str): Text content to stream.
                 - complete (bool): Whether this is the final chunk of a response.
                 - event (dict): ModelStreamChunkEvent.
         """
-        reasoningText = kwargs.get("reasoningText", False)
+        reasoning_text = kwargs.get("reasoning_text", kwargs.get("reasoningText", False))
         data = kwargs.get("data", "")
         complete = kwargs.get("complete", False)
         tool_use = kwargs.get("event", {}).get("contentBlockStart", {}).get("start", {}).get("toolUse")
 
-        if reasoningText:
-            print(reasoningText, end="")
+        if reasoning_text:
+            print(reasoning_text, end="")
 
         if data:
             print(data, end="" if not complete else "\n")

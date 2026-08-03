@@ -209,14 +209,16 @@ class TestReasoningTextStreamEvent:
         delta = Mock(spec=ContentBlockDelta)
         reasoning_text = "Thinking about the problem..."
         event = ReasoningTextStreamEvent(delta, reasoning_text)
+        assert event["reasoning_text"] == reasoning_text
         assert event["reasoningText"] == reasoning_text
-        assert event["delta"] == delta
         assert event["reasoning"] is True
+        assert event["delta"] == delta
 
     def test_initialization_with_none(self):
         """Test ReasoningTextStreamEvent initialization with None."""
         delta = Mock(spec=ContentBlockDelta)
         event = ReasoningTextStreamEvent(delta, None)
+        assert event["reasoning_text"] is None
         assert event["reasoningText"] is None
         assert event["reasoning"] is True
 
@@ -229,14 +231,16 @@ class TestReasoningRedactedContentStreamEvent:
         delta = Mock(spec=ContentBlockDelta)
         redacted_content = b"[REDACTED]"
         event = ReasoningRedactedContentStreamEvent(delta, redacted_content)
+        assert event["reasoning_redacted_content"] == redacted_content
         assert event["reasoningRedactedContent"] == redacted_content
-        assert event["delta"] == delta
         assert event["reasoning"] is True
+        assert event["delta"] == delta
 
     def test_initialization_with_none(self):
         """Test ReasoningRedactedContentStreamEvent initialization with None."""
         delta = Mock(spec=ContentBlockDelta)
         event = ReasoningRedactedContentStreamEvent(delta, None)
+        assert event["reasoning_redacted_content"] is None
         assert event["reasoningRedactedContent"] is None
         assert event["reasoning"] is True
 
@@ -250,8 +254,8 @@ class TestReasoningSignatureStreamEvent:
         signature = "signature_xyz123"
         event = ReasoningSignatureStreamEvent(delta, signature)
         assert event["reasoning_signature"] == signature
-        assert event["delta"] == delta
         assert event["reasoning"] is True
+        assert event["delta"] == delta
 
 
 class TestModelStopReason:

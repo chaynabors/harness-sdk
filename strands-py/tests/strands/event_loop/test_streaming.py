@@ -188,7 +188,7 @@ def test_handle_content_block_start(chunk: ContentBlockStartEvent, exp_tool_use)
             {},
             {"reasoningText": "thin"},
             {"reasoningText": "thinking"},
-            {"reasoningText": "king", "reasoning": True},
+            {"reasoning_text": "king", "reasoningText": "king", "reasoning": True},
         ),
         # Reasoning - Text - New
         (
@@ -196,7 +196,7 @@ def test_handle_content_block_start(chunk: ContentBlockStartEvent, exp_tool_use)
             {},
             {},
             {"reasoningText": "thin"},
-            {"reasoningText": "thin", "reasoning": True},
+            {"reasoning_text": "thin", "reasoningText": "thin", "reasoning": True},
         ),
         # Reasoning - Signature - Existing
         (
@@ -220,7 +220,11 @@ def test_handle_content_block_start(chunk: ContentBlockStartEvent, exp_tool_use)
             {},
             {},
             {"redactedContent": b"encoded"},
-            {"reasoningRedactedContent": b"encoded", "reasoning": True},
+            {
+                "reasoning_redacted_content": b"encoded",
+                "reasoningRedactedContent": b"encoded",
+                "reasoning": True,
+            },
         ),
         # Reasoning - redactedContent - Existing
         pytest.param(
@@ -228,7 +232,11 @@ def test_handle_content_block_start(chunk: ContentBlockStartEvent, exp_tool_use)
             {},
             {"redactedContent": b"encoded_"},
             {"redactedContent": b"encoded_data"},
-            {"reasoningRedactedContent": b"data", "reasoning": True},
+            {
+                "reasoning_redacted_content": b"data",
+                "reasoningRedactedContent": b"data",
+                "reasoning": True,
+            },
         ),
         # Reasoning - Empty
         (
@@ -1028,9 +1036,10 @@ async def test_process_stream(response, exp_events, agenerator, alist):
                 {"event": {"contentBlockStart": {"start": {}}}},
                 {"event": {"contentBlockDelta": {"delta": {"reasoningContent": {"redactedContent": b"encoded_data"}}}}},
                 {
+                    "reasoning_redacted_content": b"encoded_data",
                     "reasoningRedactedContent": b"encoded_data",
-                    "delta": {"reasoningContent": {"redactedContent": b"encoded_data"}},
                     "reasoning": True,
+                    "delta": {"reasoningContent": {"redactedContent": b"encoded_data"}},
                 },
                 {"event": {"contentBlockStop": {}}},
                 {"event": {"messageStop": {"stopReason": "end_turn"}}},
