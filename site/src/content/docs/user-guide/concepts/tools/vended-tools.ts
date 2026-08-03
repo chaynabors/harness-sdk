@@ -5,7 +5,8 @@ import { fileEditor } from '@strands-agents/sdk/vended-tools/file-editor'
 import { httpRequest } from '@strands-agents/sdk/vended-tools/http-request'
 import { notebook } from '@strands-agents/sdk/vended-tools/notebook'
 // --8<-- [end:basic_import]
-import { SessionManager, FileStorage } from '@strands-agents/sdk'
+import { SessionManager, FileStorage, McpClient } from '@strands-agents/sdk'
+import { makeToolRegistry } from '@strands-agents/sdk/vended-tools/tool-registry'
 
 // Agent with vended tools example
 async function agentWithVendedToolsExample() {
@@ -110,6 +111,18 @@ async function notebookStatePersistenceExample() {
   // --8<-- [end:notebook_state_persistence]
 }
 
+// Tool registry example
+async function toolRegistryExample() {
+  // --8<-- [start:tool_registry_example]
+  const weather = new McpClient({ url: 'https://weather.example.com/mcp' })
+  await weather.connect()
+
+  const registryTool = makeToolRegistry({ mcpClients: { weather } })
+  const agent = new Agent({ tools: [registryTool] })
+  await agent.invoke('List the tools you have, then add the forecast tool from weather.')
+  // --8<-- [end:tool_registry_example]
+}
+
 // Combined tools example - development workflow
 async function combinedToolsExample() {
   // --8<-- [start:combined_tools_example]
@@ -130,4 +143,17 @@ async function combinedToolsExample() {
       'It should reject empty names and invalid email formats.'
   )
   // --8<-- [end:combined_tools_example]
+}
+
+import { stop } from '@strands-agents/sdk/vended-tools/stop'
+
+// Stop tool example
+async function stopExample() {
+  // --8<-- [start:stop_example]
+  const agent = new Agent({
+    tools: [stop],
+    systemPrompt: 'Complete the task. Call stop with a short summary when you are done.',
+  })
+  await agent.invoke('Summarize the changes in ./CHANGELOG.md')
+  // --8<-- [end:stop_example]
 }
