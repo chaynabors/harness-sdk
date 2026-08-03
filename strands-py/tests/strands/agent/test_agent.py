@@ -490,7 +490,6 @@ def test_agent__call__passes_invocation_state(mock_model, agent, tool, mock_even
     async def check_invocation_state(**kwargs):
         invocation_state = kwargs["invocation_state"]
         assert invocation_state["some_value"] == "a_value"
-        assert invocation_state["system_prompt"] == override_system_prompt
         assert invocation_state["model"] == override_model
         assert invocation_state["event_loop_metrics"] == override_event_loop_metrics
         assert invocation_state["callback_handler"] == override_callback_handler
@@ -1298,6 +1297,44 @@ def test_system_prompt_content_returns_copy():
     content = agent.system_prompt_content
     content.append({"text": "injected"})
     assert agent.system_prompt_content == [{"text": "hello"}]
+
+
+def test_agent__call__system_prompt_override_restores_persistent_prompt(agent, mock_event_loop_cycle):
+    """Per-call ``system_prompt`` overrides for the call and is restored afterwards."""
+    override = "Override system prompt"
+    seen_during_call: dict[str, Any] = {}
+
+    async def capture_system_prompt(**kwargs):
+        seen_during_call["system_prompt"] = agent.system_prompt
+        seen_during_call["system_prompt_content"] = agent.system_prompt_content
+        yield EventLoopStopEvent("stop", {"role": "assistant", "content": [{"text": "ok"}]}, {}, {})
+
+    mock_event_loop_cycle.side_effect = capture_system_prompt
+
+    agent("test message", system_prompt=override)
+
+    assert seen_during_call["system_prompt"] == override
+    assert seen_during_call["system_prompt_content"] == [{"text": override}]
+    assert agent.system_prompt == "You are a helpful assistant."
+    assert agent.system_prompt_content == [{"text": "You are a helpful assistant."}]
+
+
+def test_agent__call__system_prompt_override_restored_on_exception(agent, mock_event_loop_cycle):
+    """Per-call ``system_prompt`` is restored even when the event loop raises."""
+    override = "Override system prompt"
+
+    async def raise_during_call(**kwargs):
+        assert agent.system_prompt == override
+        raise EventLoopException(RuntimeError("boom"))
+        yield  # noqa: RET503 - makes this an async generator
+
+    mock_event_loop_cycle.side_effect = raise_during_call
+
+    with pytest.raises(EventLoopException):
+        agent("test message", system_prompt=override)
+
+    assert agent.system_prompt == "You are a helpful assistant."
+    assert agent.system_prompt_content == [{"text": "You are a helpful assistant."}]
 
 
 @pytest.mark.asyncio
