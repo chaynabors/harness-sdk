@@ -184,6 +184,15 @@ def test_create_agent(s3_manager, sample_session, sample_agent):
     assert data["state"] == sample_agent.state
 
 
+def test_create_agent_already_exists(s3_manager, sample_session, sample_agent):
+    """Test that creating a duplicate agent does not silently overwrite."""
+    s3_manager.create_session(sample_session)
+    s3_manager.create_agent(sample_session.session_id, sample_agent)
+
+    with pytest.raises(SessionException, match="already exists"):
+        s3_manager.create_agent(sample_session.session_id, sample_agent)
+
+
 def test_read_agent(s3_manager, sample_session, sample_agent):
     """Test reading an agent from S3."""
     # Create session and agent

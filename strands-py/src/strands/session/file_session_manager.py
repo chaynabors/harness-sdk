@@ -162,10 +162,13 @@ class FileSessionManager(RepositorySessionManager, SessionRepository):
         agent_id = session_agent.agent_id
 
         agent_dir = self._get_agent_path(session_id, agent_id)
+        agent_file = os.path.join(agent_dir, "agent.json")
+        if os.path.exists(agent_file):
+            raise SessionException(f"Agent {agent_id} already exists in session {session_id}")
+
         os.makedirs(agent_dir, exist_ok=True)
         os.makedirs(os.path.join(agent_dir, "messages"), exist_ok=True)
 
-        agent_file = os.path.join(agent_dir, "agent.json")
         session_data = session_agent.to_dict()
         self._write_file(agent_file, session_data)
 

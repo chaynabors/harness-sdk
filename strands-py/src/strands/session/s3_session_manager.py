@@ -214,8 +214,16 @@ class S3SessionManager(RepositorySessionManager, SessionRepository):
     def create_agent(self, session_id: str, session_agent: SessionAgent, **kwargs: Any) -> None:
         """Create a new agent in S3."""
         agent_id = session_agent.agent_id
-        agent_dict = session_agent.to_dict()
         agent_key = f"{self._get_agent_path(session_id, agent_id)}agent.json"
+
+        try:
+            self.client.head_object(Bucket=self.bucket, Key=agent_key)
+            raise SessionException(f"Agent {agent_id} already exists in session {session_id}")
+        except ClientError as e:
+            if e.response["Error"]["Code"] != "404":
+                raise SessionException(f"S3 error checking agent existence: {e}") from e
+
+        agent_dict = session_agent.to_dict()
         self._write_s3_object(agent_key, agent_dict)
 
     def read_agent(self, session_id: str, agent_id: str, **kwargs: Any) -> SessionAgent | None:
