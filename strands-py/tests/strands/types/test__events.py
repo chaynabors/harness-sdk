@@ -99,6 +99,26 @@ class TestInitEventLoopEvent:
         assert event["session"] == "abc"
         assert event["init_event_loop"] is True
 
+    def test_prepare_filters_sdk_internal_keys(self):
+        """Internal event-loop bookkeeping must not leak into the emitted event."""
+        event = InitEventLoopEvent()
+        event.prepare(
+            {
+                "agent": object(),
+                "event_loop_cycle_span": object(),
+                "event_loop_parent_span": object(),
+                "messages": [{"role": "user"}],
+                "model": object(),
+                "request_id": "123",
+            }
+        )
+        assert "agent" not in event
+        assert "event_loop_cycle_span" not in event
+        assert "event_loop_parent_span" not in event
+        assert "messages" not in event
+        assert "model" not in event
+        assert event["request_id"] == "123"
+
 
 class TestStartEvent:
     """Tests for StartEvent (deprecated)."""
@@ -156,6 +176,30 @@ class TestModelStreamEvent:
         event.prepare(invocation_state)
         assert event["request_id"] == "456"
         assert event["delta"] == "content"
+
+    def test_prepare_with_delta_filters_sdk_internal_keys(self):
+        """SDK-internal keys must not leak into streamed model events."""
+        event = ModelStreamEvent({"delta": "content"})
+        event.prepare(
+            {
+                "agent": object(),
+                "event_loop_cycle_span": object(),
+                "event_loop_parent_span": object(),
+                "messages": [{"role": "user"}],
+                "model": object(),
+                "system_prompt": "prompt",
+                "tool_config": {"tools": []},
+                "request_id": "456",
+            }
+        )
+        assert "agent" not in event
+        assert "event_loop_cycle_span" not in event
+        assert "event_loop_parent_span" not in event
+        assert "messages" not in event
+        assert "model" not in event
+        assert "system_prompt" not in event
+        assert "tool_config" not in event
+        assert event["request_id"] == "456"
 
     def test_prepare_without_delta(self):
         """Test prepare method does nothing when delta is not present."""
@@ -323,6 +367,22 @@ class TestEventLoopThrottleEvent:
         event.prepare(invocation_state)
         assert event["request_id"] == "throttle_123"
         assert event["event_loop_throttled_delay"] == 10
+
+    def test_prepare_filters_sdk_internal_keys(self):
+        """Throttle events must not carry SDK-internal bookkeeping to consumers."""
+        event = EventLoopThrottleEvent(10)
+        event.prepare(
+            {
+                "agent": object(),
+                "event_loop_cycle_span": object(),
+                "messages": [{"role": "user"}],
+                "request_id": "throttle_123",
+            }
+        )
+        assert "agent" not in event
+        assert "event_loop_cycle_span" not in event
+        assert "messages" not in event
+        assert event["request_id"] == "throttle_123"
 
 
 class TestToolResultEvent:
