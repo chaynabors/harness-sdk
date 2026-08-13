@@ -64,9 +64,21 @@
       "types": "./dist/src/vended-tools/http-request/index.d.ts",
       "default": "./dist/src/vended-tools/http-request/index.js"
     },
+    "./vended-tools/shell": {
+      "types": "./dist/src/vended-tools/shell/index.d.ts",
+      "default": "./dist/src/vended-tools/shell/index.js"
+    },
     "./vended-tools/bash": {
       "types": "./dist/src/vended-tools/bash/index.d.ts",
       "default": "./dist/src/vended-tools/bash/index.js"
+    },
+    "./vended-tools/sleep": {
+      "types": "./dist/src/vended-tools/sleep/index.d.ts",
+      "default": "./dist/src/vended-tools/sleep/index.js"
+    },
+    "./experimental/vended-tools/stop": {
+      "types": "./dist/src/experimental/vended-tools/stop/index.d.ts",
+      "default": "./dist/src/experimental/vended-tools/stop/index.js"
     },
     "./a2a": {
       "types": "./dist/src/a2a/index.d.ts",
@@ -235,7 +247,8 @@
   },
   "homepage": "https://github.com/strands-agents/harness-sdk#readme",
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.1078.0",
+    "@smithy/fetch-http-handler": "^5.6.10",
+    "@aws-sdk/client-bedrock-runtime": "^3.1097.0",
     "@types/json-schema": "^7.0.15",
     "uuid": "^14.0.1",
     "yaml": "^2.8.3"
